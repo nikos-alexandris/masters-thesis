@@ -1,0 +1,223 @@
+\chapter{Optimisation of Thunks in CakeML}
+\label{chap:thunks}
+
+Moving downwards on the compilation pipeling, this chapter describes our work
+for the last part of the thesis, optimising the representation of thunks in
+CakeML. The CakeML compiler was not built for a lazy language, so it rightly
+doesn't consider thunks natively. However, when considered as a target for
+PureCake, it is critical that it can handle thunks effectively, since they are
+the main source of inefficiency between lazy and strict programs. In our work,
+we add thunks to the CakeML source language's state, and target them directly
+from PureCake. We then consider the consequences of this change on both
+codebases and discuss possible optimisations in CakeML's runtime.
+
+\section{The Stateful Semantics of \StateLang{}}
+
+\StateLang{} is the last intermediate representation in the PureCake pipeline,
+and the boundary between PureCake and CakeML. It is also the only intermediate
+representation with a stateful semantics which means it can represent stateful
+thunks. Before \StateLang{}, thunks are stateless; when evaluating an expression
+like \hsinl{f (g x)}, the argument \lit{g x} is turned into a thunk value and
+whenever the corresponding parameter is used in the body of f, the expression
+\lit{g x} is computed anew without the possibility of memoising the result, as
+that would require some stateful operation.
+
+\StateLang{}'s semantics provide a solution for this problem by employing a
+stateful store. This store is an array of mutable arrays, where each array
+element can be mutated in place. \StateLang{} also provides primitive operations
+for manipulating arrays, namely \lit{Alloc} for allocating an array, \lit{Sub}
+for dereferencing an array element and \lit{Update} for updating the value of an
+array element.
+
+\StateLang{} uses a \todo{small-step reference} continuation based small-step
+semantics, in contrast with \ThunkLang{}'s big step semantics. In small-step
+semantics, the semantic function does not walk the expression structure
+recursively. Instead, it breaks down the evaluation process into atomic steps,
+and takes one step at a time, returning the rest of the computation as a result.
+Concretely, the evaluation function takes a state, a clock, and an expression
+and returns one of three results: An expression, a value, or an error. In
+actuality, there are two more results, namely exception and action values for
+performing cross-language calls but they are not important for our treatment of
+the semantics. Along with the result, the \lit{step} function returns a new
+state and a continuation stack. The continuation stack is a list of remaining
+operations waiting to be executed in the rest of the steps. As an example, let's
+consider how \StateLang{}'s semantics handle application expressions. The
+(simplified) \lit{step} function looks like this:
+
+\begin{minted}{haskell}
+step st k (Exp env (App op (e:es))) =
+  if not (num_args_ok op (length (e:es)))
+    then error st k
+    else push env e st (AppK env op [] es) k
+\end{minted}
+
+We see that first the function checks if the number of arguments is the correct
+for the given operation. In \StateLang{}, the term ``application operator'' is
+used to refer to many things, one of them being a function application, but for
+example another one being the ``application'' of the \lit{Sub} operator to an
+index and an array. So, assuming that we are talking about function application
+for this example, the \lit{step} function should have received two expressions
+else it will return an error. If the number of arguments is correct, the
+function calls \lit{push}, which just constructs a result consisting of \lit{e}
+as the expression, \lit{st} as the state and the continuation stack \lit{k}
+prepended with the \lit{AppK} continuation.
+
+Intuitively, the \lit{step} function takes away arguments from the application
+expression one by one, evaluates them and has stored a ``promise'' in the form
+of a continuation that it will eventually apply the operator to the resulting
+values. When all the operands have been evaluated, the \lit{AppK} continuation
+will come to be handled, which will apply the operator to the list of values
+produced by the evaluation of the arguments. In the case of the application
+operator, it will check the head in the list of values to make sure it is a
+closure; then it will bind the second value in the list to the closure's
+environment, and finally it will return the closure's expression with the new
+environment for the \lit{step} function to start evaluating it.
+
+We can now explain the semantics of the stateful operators \lit{Alloc},
+\lit{Sub} and \lit{Update}. These operators are all application operators,
+therefore their evaluation will take a similar course with the application
+operator. When applied to the list of values, \lit{Alloc} expects two values: a
+number $n$ and an arbitrary value $v$. The \lit{application} function then will
+append a new array of length $n$ to the state and fill it with $n$ occurrences
+of $v$. It will then return the length of the state as the index of the
+allocated array, assuming that accesses to the state are zero-based. The
+\lit{Sub} operator also expects two values: an index $n$ to select an array from
+the state, and an index $m$ to select an element from the $n$th array of the
+state. The \lit{application} function returns the selected element and leave the
+state intact. Lastly, the \lit{Update} operator expects three values: two
+indices to select an element like \lit{Sub}, and a third value to replace that
+element. The \lit{application} function will update that element in the state
+with the third value, and return the unit constructor.
+
+Currently, \StateLang{}'s store is used to implement thunks in an ad-hoc way.
+Instead of having a proper representation for thunks, a thunk is represented as
+a two value array: the first value is a boolean flag and the second value is the
+actual value. When a thunk is needed, the array is allocated with the flag set
+to signal that the thunk is not yet evaluated, and the second value being a
+closure that when applied to unit computes the thunk's value. When a \lit{force}
+encounters such a value, it checks the flag in the first place of the array and,
+if it is set it immediately returns the value in the second place. If it is not
+set, it applies the second value to unit, replaces the function with the value,
+sets the flag and finally returns the value. To make these operations more
+efficient, there are dual unsafe operators of \lit{Sub} and \lit{Update} called
+\lit{UnsafeSub} and \lit{UnsafeUpdate} respectively. Since the semantics know
+the shape the array argument of a \lit{force} will have, there is no need to
+check if the two indices are in range.
+
+The transition from the stateless thunks of \ThunkLang{} to the stateful thunks
+of \StateLang{} is done in a \StateLang{}-to-\StateLang{} transformation; the
+\StateLang{} source language only has stateless thunks with the usual
+\lit{force} and \lit{delay} operators, but implements an optimisation pass that
+replaces the stateless thunk expressions with stateful operations on the store,
+an optimisation called unthunking.
+
+The decision to design \StateLang{}'s store like that was not arbitrary. This is
+the form of CakeML's state and, since \StateLang{} is compiled directly to
+CakeML it was the natural choice to make. However, it is evident that this
+representation is not ideal and throws away information that can be used during
+the CakeML compilation to optimise the program even more.
+
+\section{Making Thunks Explicit}
+
+Before being able to make any optimisations to thunks on the CakeML side, we
+first need to make thunks explicit in both the CakeML's source language and in
+\StateLang{}.
+
+On the side of CakeML, adding thunks to the language consisted of creating a new
+kind of store besides the generic arrays to specialise for thunks, along with
+operations for allocating, updating and forcing them. Now, the PureCake compiler
+can target them directly instead of simulating them with arrays of two values.
+The same change was made in \StateLang{}, with the store now consisting of an
+array of arrays or thunks, and with the unsafe application operators removed in
+favor of new operators \lit{AllocMutThunk}, \lit{UpdateMutThunk}, and
+\lit{ForceMutThunk}. These changes alone made a big difference in the handling
+of thunks; compilation from PureCake to CakeML is more straightforward and
+obvious, and proofs inside \StateLang{} become easier to develop and understand.
+For example, the unthunking optimisation in \StateLang{} previously had no
+direct way of forcing a thunk simulated by an array. Instead, it generated code
+that looked like this:
+
+\begin{minted}{haskell}
+Let "v1" (App UnsafeSub [Var "v", Int 0]) $
+Let "v2" (App UnsafeSub [Var "v", Int 1]) $
+  If (Var "v1") (Var "v2") $
+    Let "wh" (App AppOp (Var "v2") Unit) $
+    Let "_" (App UnsafeUpdate [Var "v"; Int 0; True]) $
+    Let "_" (App UnsafeUpdate [Var "v"; Int 1; Var "wh"]) $
+      Var "wh"
+\end{minted}
+
+This code mimics the desired semantics for thunks. For a variable $v$ that
+points to a simulated thunk in the store, extract the flag and the value and if
+the flag is set then return the value directly, else compute it, update the
+thunk and return the value. This means that the semantics of thunks were hidden
+as a code generation in a proof instead of being explicit in the semantics of
+the language. With the addition of thunk to the language, this whole construct
+has just been replaced with a $\lambda$\hsinl{x. App ForceMutThunk [x]}.
+
+By making the semantics more explicit, we are also forced to handle edge cases
+of our semantics explicitly. For example, because of the small-step semantics,
+when we force a thunk we check if it's evaluated or not. If it isn't, we can't
+just evaluate the underlying closure. Instead, we return a configuration that
+describes this computation. When we come to handle this continuation at a later
+step, we again find the same thunk in the store and try to evaluate it. But we
+now need a proof that, in the meantime, this thunk has not already been
+evaluated, or is not in the process of being evaluated. This is reminiscent of
+the black hole problem in Haskell \cite{van1999optimising}. In Haskell, the
+runtime representation of thunks does not have a binary flag, evaluated and not
+evaluated, as we have described for our thunks. Instead, it has three possible
+values: evaluated, not evaluated and evaluating. When a thunk starts getting
+evaluated, the evaluating flag is set. Then, if a \lit{force} tries to update an
+evaluating thunk, then the runtime system detects that as an infinite loop and
+throws an exception. However, in our semantics we prove that if we try to force
+an evaluating thunk we will eventually diverge, so we only have to handle the
+evaluating and not evaluating cases in the rest of our proofs and in the
+runtime.
+
+\section{Taking Advantage of Thunks in the Runtime}
+
+CakeML, like every high-level functional language, has a garbage collected
+runtime. Each time a certain threshold of allocated memory is surpassed, the
+program stops running and the garbage collector sweeps through the memory
+starting at known used locations called roots, and marks all the used memory.
+Any unused memory is then freed and the program can start running again with new
+memory free to claim. The actual garbage collector for CakeML employs a more
+complicated scheme than that \cite{sandberg2019verified}, but this mental model
+is enough for our description here.
+
+By having thunks represented explicitly in the CakeML source language, we can
+make them explicit through all of CakeML's intermediate representations down to
+the runtime. This would give the ability to the garbage collector to
+discriminate between chunks of memory that represent thunks, which would allow
+an important optimisation called updating \cite{seward1992generational}.
+
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \tikzstyle{box} = [
+      rectangle, rounded corners, minimum width=2cm, minimum height=1cm,
+      text centered, draw=black
+    ]
+    \node (box1) [box] {Evaluated};
+    \node (box2) [box, right=0cm of box1] {Pointer};
+    \node (box3) [box, right=0.85cm of box2] {Value};
+    \draw[-stealth] (box2.east) -- (box3.west) node[]{};
+  \end{tikzpicture}
+  \caption{Evaluated Thunk in Memory}
+  \label{fig:thunk}
+\end{figure}
+
+An evaluated thunk in memory looks like figure \ref{fig:thunk}. The first word
+is the flag that states it's been evaluated and the second word is a pointer to
+the actual value. Since we now know that these two cells are a thunk and not
+just an array, we can instruct the garbage collector to replace the thunk with
+the evaluated value when it encounters it. This optimisation is crucial for both
+memory and time efficiency of the program; firstly, it deallocates a value in
+memory for free and secondly it makes the program more cache friendly. One could
+imagine a program that evaluates a list of integers and then iterates over
+continuously using them for some mathematical operation. Without this
+optimisation, every integer read is almost sure to miss the cache, whereas this
+optimisation enables a more compact runtime representation. Furthermore, it
+creates opportunities for more optimisations, for example smarter garbage
+collection that can detect the list structure after the inlining of the values
+and place them packed together in the heap for even better cache hit frequency.

@@ -1,0 +1,238 @@
+@article{CompCert,
+  author     = {Leroy, Xavier},
+  title      = {Formal verification of a realistic compiler},
+  year       = {2009},
+  issue_date = {July 2009},
+  publisher  = {Association for Computing Machinery},
+  address    = {New York, NY, USA},
+  volume     = {52},
+  number     = {7},
+  issn       = {0001-0782},
+  url        = {https://doi.org/10.1145/1538788.1538814},
+  doi        = {10.1145/1538788.1538814},
+  abstract   = {This paper reports on the development and formal verification (proof of semantic preservation) of CompCert, a compiler from Clight (a large subset of the C programming language) to PowerPC assembly code, using the Coq proof assistant both for programming the compiler and for proving its correctness. Such a verified compiler is useful in the context of critical software and its formal verification: the verification of the compiler guarantees that the safety properties proved on the source code hold for the executable compiled code as well.},
+  journal    = {Commun. ACM},
+  month      = {jul},
+  pages      = {107-115},
+  numpages   = {9}
+}
+
+@article{Velus,
+author = {Bourke, Timothy and Brun, L\'{e}lio and Dagand, Pierre-\'{E}variste and Leroy, Xavier and Pouzet, Marc and Rieg, Lionel},
+title = {A formally verified compiler for Lustre},
+year = {2017},
+issue_date = {June 2017},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {52},
+number = {6},
+issn = {0362-1340},
+url = {https://doi.org/10.1145/3140587.3062358},
+doi = {10.1145/3140587.3062358},
+abstract = {The correct compilation of block diagram languages like Lustre, Scade, and a discrete subset of Simulink is important since they are used to program critical embedded control software. We describe the specification and verification in an Interactive Theorem Prover of a compilation chain that treats the key aspects of Lustre: sampling, nodes, and delays. Building on CompCert, we show that repeated execution of the generated assembly code faithfully implements the dataflow semantics of source programs.  We resolve two key technical challenges. The first is the change from a synchronous dataflow semantics, where programs manipulate streams of values, to an imperative one, where computations manipulate memory sequentially. The second is the verified compilation of an imperative language with encapsulated state to C code where the state is realized by nested records. We also treat a standard control optimization that eliminates unnecessary conditional statements.},
+journal = {SIGPLAN Not.},
+month = {jun},
+pages = {586-601},
+numpages = {16},
+keywords = {Verified Compilation, Synchronous Languages (Lustre), Interactive Theorem Proving (Coq)}
+}
+
+@InProceedings{Kalas,
+  author =	{Pohjola, Johannes \r{A}man and G\'{o}mez-Londo\~{n}o, Alejandro and Shaker, James and Norrish, Michael},
+  title =	{{Kalas: A Verified, End-To-End Compiler for a Choreographic Language}},
+  booktitle =	{13th International Conference on Interactive Theorem Proving (ITP 2022)},
+  pages =	{27:1--27:18},
+  series =	{Leibniz International Proceedings in Informatics (LIPIcs)},
+  ISBN =	{978-3-95977-252-5},
+  ISSN =	{1868-8969},
+  year =	{2022},
+  volume =	{237},
+  editor =	{Andronick, June and de Moura, Leonardo},
+  publisher =	{Schloss Dagstuhl -- Leibniz-Zentrum f{\"u}r Informatik},
+  address =	{Dagstuhl, Germany},
+  URL =		{https://drops-dev.dagstuhl.de/entities/document/10.4230/LIPIcs.ITP.2022.27},
+  URN =		{urn:nbn:de:0030-drops-167368},
+  doi =		{10.4230/LIPIcs.ITP.2022.27},
+  annote =	{Keywords: Choreographies, Interactive Theorem Proving, Compiler Verification}
+}
+
+@inproceedings{Candle,
+  author = {Oskar Abrahamsson and
+            Magnus O. Myreen and
+            Ramana Kumar and
+            Thomas Sewell},
+  title = {{Candle}: A Verified Implementation of {HOL} {Light}},
+  year = 2022,
+  booktitle = {Interactive Theorem Proving ({ITP})},
+  publisher = {LIPIcs},
+  url = {https://drops.dagstuhl.de/opus/volltexte/2022/16712/pdf/LIPIcs-ITP-2022-3.pdf}
+}
+
+@inproceedings{PureCake,
+  author = {Hrutvik Kanabar and
+Samuel Vivien and
+Oskar Abrahamsson and
+Magnus O. Myreen and
+Michael Norrish and
+Johannes Åman Pohjola and
+Riccardo Zanetti},
+  title = {{PureCake}: A Verified Compiler for a Lazy Functional Language},
+  year = 2023,
+  booktitle = {Programming Language Design and Implementation  (PLDI)},
+  publisher = {ACM},
+  url = {pldi23-purecake.pdf}
+}
+
+@inproceedings{CakeML,
+  author = {Ramana Kumar and
+            Magnus O. Myreen and
+            Michael Norrish and
+            Scott Owens},
+  title = {{CakeML}: A Verified Implementation of {ML}},
+  month = jan,
+  year = 2014,
+  pages = {179--191},
+  publisher = {ACM Press},
+  url = {https://cakeml.org/popl14.pdf},
+  booktitle = {Principles of Programming Languages ({POPL})},
+  doi = {10.1145/2535838.2535841}
+}
+
+@inproceedings{HOL4,
+  title={A brief overview of HOL4},
+  author={Slind, Konrad and Norrish, Michael},
+  booktitle={International Conference on Theorem Proving in Higher Order Logics},
+  pages={28--32},
+  year={2008},
+  organization={Springer}
+}
+
+@article{Worker/Wrapper,
+author = {Gill, Andy and Hutton, Graham},
+year = {2009},
+month = {01},
+pages = {},
+title = {The Worker/Wrapper Transformation (Extended Version)},
+volume = {19},
+journal = {J. Funct. Program.}
+}
+
+@article{CakeMLCalls,
+author = {Owens, Scott and Norrish, Michael and Kumar, Ramana and Myreen, Magnus O. and Tan, Yong Kiam},
+title = {Verifying efficient function calls in CakeML},
+year = {2017},
+issue_date = {September 2017},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {1},
+number = {ICFP},
+url = {https://doi.org/10.1145/3110262},
+doi = {10.1145/3110262},
+abstract = {We have designed an intermediate language (IL) for the CakeML compiler that supports the verified, efficient compilation of functions and calls. Verified compilation steps include batching of multiple curried arguments, detecting calls to statically known functions, and specialising calls to known functions with no free variables. Finally, we verify the translation to a lower-level IL that only supports closed, first-order functions.  These compilation steps resemble those found in other compilers (especially OCaml). Our contribution here is the design of the semantics of the IL, and the demonstration that our verification techniques over this semantics work well in practice at this scale. The entire development was carried out in the HOL4 theorem prover.},
+journal = {Proc. ACM Program. Lang.},
+month = {aug},
+articleno = {18},
+numpages = {27},
+keywords = {Compiler verification, ML, verified optimisations}
+}
+
+@article{kumar2018clocked,
+  title={Clocked Definitions in HOL},
+  author={Kumar, Ramana and Myreen, Magnus O},
+  journal={arXiv preprint arXiv:1803.03417},
+  year={2018}
+}
+
+@article{dreyer2011logical,
+  title={Logical step-indexed logical relations},
+  author={Dreyer, Derek and Ahmed, Amal and Birkedal, Lars},
+  journal={Logical Methods in Computer Science},
+  volume={7},
+  year={2011},
+  publisher={Episciences. org}
+}
+
+@article{paraskevopoulou2021compositional,
+  title={Compositional optimizations for CertiCoq},
+  author={Paraskevopoulou, Zoe and Li, John M and Appel, Andrew W},
+  journal={Proceedings of the ACM on Programming Languages},
+  volume={5},
+  number={ICFP},
+  pages={1--30},
+  year={2021},
+  publisher={ACM New York, NY, USA}
+}
+
+@inproceedings{owens2016functional,
+  title={Functional big-step semantics},
+  author={Owens, Scott and Myreen, Magnus O and Kumar, Ramana and Tan, Yong Kiam},
+  booktitle={Programming Languages and Systems: 25th European Symposium on Programming, ESOP 2016, Held as Part of the European Joint Conferences on Theory and Practice of Software, ETAPS 2016, Eindhoven, The Netherlands, April 2--8, 2016, Proceedings 25},
+  pages={589--615},
+  year={2016},
+  organization={Springer}
+}
+
+@article{bjesse2005formal,
+  title={What is formal verification?},
+  author={Bjesse, Per},
+  journal={ACM Sigda Newsletter},
+  volume={35},
+  number={24},
+  pages={1--es},
+  year={2005},
+  publisher={ACM New York, NY, USA}
+}
+
+@inproceedings{tailrec,
+  title={Proper tail recursion and space efficiency},
+  author={Clinger, William D},
+  booktitle={Proceedings of the ACM SIGPLAN 1998 conference on Programming language design and implementation},
+  pages={174--185},
+  year={1998}
+}
+
+@inproceedings{lazygc,
+  title={Generational garbage collection for lazy graph reduction},
+  author={Seward, Julian},
+  booktitle={Memory Management: International Workshop IWMM 92 St. Malo, France, September 17--19, 1992 Proceedings},
+  pages={200--217},
+  year={1992},
+  organization={Springer}
+}
+
+@inproceedings{kahn1987natural,
+  title={Natural semantics},
+  author={Kahn, Gilles},
+  booktitle={Annual symposium on theoretical aspects of computer science},
+  pages={22--39},
+  year={1987},
+  organization={Springer}
+}
+
+@inproceedings{van1999optimising,
+  title={Optimising recursive functions yielding multiple results in tuples in a lazy functional language},
+  author={van Groningen, John HG},
+  booktitle={Symposium on Implementation and Application of Functional Languages},
+  pages={59--76},
+  year={1999},
+  organization={Springer}
+}
+
+@article{sandberg2019verified,
+  title={A verified generational garbage collector for CakeML},
+  author={Sandberg Ericsson, Adam and Myreen, Magnus O and {\AA}man Pohjola, Johannes},
+  journal={Journal of Automated Reasoning},
+  volume={63},
+  pages={463--488},
+  year={2019},
+  publisher={Springer}
+}
+
+@inproceedings{seward1992generational,
+  title={Generational garbage collection for lazy graph reduction},
+  author={Seward, Julian},
+  booktitle={Memory Management: International Workshop IWMM 92 St. Malo, France, September 17--19, 1992 Proceedings},
+  pages={200--217},
+  year={1992},
+  organization={Springer}
+}

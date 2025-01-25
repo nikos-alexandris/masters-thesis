@@ -1,0 +1,296 @@
+\chapter{Introduction}
+\label{chap:intro}
+
+In this section we describe the setting of our thesis; we give a detailed
+description of the projects we will be working on, the tools we are going to
+use, as well as previous research efforts on the area of compiler verification.
+We then motivate our project by examining an example that explains the scope of
+our work in the PureCake compiler. Finally, we give a brief outline of our work
+and the structure of the rest of the thesis.
+
+\section{Formal Verification in Software Systems}
+
+Formal verification is defined as the use of mathematical techniques to ensure
+that a design conforms to some precisely expressed notion of functional
+correctness \cite{bjesse2005formal}. Specifically, in the context of software
+development, a piece of software is said to be formally verified if it provably
+transforms its inputs to outputs based on a given specification. A specification
+is usually a mathematical model of the program. For example, one could formally
+verify a regular expression matching program by describing a mapping of the
+program's datatypes to finite state automata, and a mapping of the program's
+procedures to transformations over these automata. Then, the rich mathematical
+theory of finite automata can be used to prove that the transformations are
+correct, therefore proving that the program must also be correct.
+
+However, for sufficiently complex programs, doing this transformation on paper
+would be impractical and very error-prone. Therefore, the preferred way is to
+use software tools called theorem provers or proof assistants. These tools allow
+the programmer to state theorems about the behaviour of their code directly in
+the programming language and then interactively prove them. In our work for this
+thesis, we have used the HOL theorem prover \cite{HOL4}, a proof assistant
+implemented on top of the Standard ML language which supports specification and
+proof development in higher order logic.
+
+This thesis is concerned with formal verification of programming language
+compilers. Compilers are some of the most complicated pieces of software, and
+are notoriously difficult to implement. However, their structure makes them a
+particularly good fit to develop in a theorem prover, which presents its own
+difficulties, but can guarantee that the compiler is sound and bug-free.
+Formally verified compilers already exist and have been successfully used in
+real-world systems, where code correctness is critical. A prominent example of a
+practical verified compiler is CompCert \cite{CompCert}, a fully-featured,
+formally validated compiler for a large subset of the C99 language.
+
+\section{The PureCake Project}
+
+While verified compilers such as CompCert exist, they compile small or low level
+languages. This is the case because these languages have been historically used
+in critical systems due to their time, memory, and energy efficiency.
+Nevertheless, with the constant progress in hardware and software research,
+higher level languages are now also viable to be used in even the most
+constrained environments. This is preferred when possible, as high level
+languages provide better programming facilities and more guarantees about the
+behaviour of the code.
+
+In contrast to low level and usually imperative languages such as C, high level
+languages strive to be more declarative and aid the programmer to only have to
+think about the task at hand. This is achieved by providing powerful features
+both during the compilation of the programs, such as type inference and pattern
+matching, and during the runtime such as garbage collection. One such class of
+languages are functional languages. Functional programming's main feature is the
+treatment of functions as first-class entities, meaning that any function can be
+passed as an argument, returned from another function or stored in a data
+structure. Whereas in imperative programming procedures are sequences of
+instructions, in functional programming functions are expressions that transform
+inputs to outputs in a modular manner.
+
+Writing programs in a functional style leads to fewer bugs and easier to test
+programs, so having a verified compiler for a functional language would provide
+strong guarantees about a program's behaviour. The CakeML project \cite{CakeML}
+implements the first fully-featured formally verified compiler for a high level,
+functional programming language. It compiles an ML-like language complete with
+type inference, pattern matching, and garbage collected runtime, targeting
+various hardware architectures. CakeML also implements a series of optimisations
+that make the generated executables competitive in runtime efficiency with the
+mainstream unverified alternatives.
+
+Even though CakeML is a step towards a more modular and high level verified
+language, it follows the tradition of the Standard ML language; code usually
+conforms to the functional programming style, but side effects such as mutating
+variables and printing to the terminal are still allowed. Pushing the functional
+paradigm even further are languages such as Haskell, commonly described as pure,
+lazy functional languages. In this context, pure means that calling a function
+with the same inputs will always yield the same results, thus implying absence
+of side effects, and lazy means that every expression is only evaluated when
+needed. This means that computation in these languages directly maps to
+evaluation of mathematical functions, which makes reasoning about programs very
+intuitive.
+
+Building on top of CakeML, the PureCake project \cite{PureCake} has much the
+same goals as CakeML, but for the compilation of lazy pure functional languages.
+The PureCake compiler handles the front-end of the compilation process, such as
+parsing and type checking. It then transforms the source program to a CakeML
+program and hands off the rest of the compilation process to the CakeML
+compiler, therefore creating a verified end-to-end compilation process.
+
+\section{PureCake's Compilation Process}
+
+For PureCake to use the CakeML compiler as a backend to handle the verified
+generation of machine code, it first has to translate its language to CakeML's
+language. The semantics of these languages differ mainly in two ways: purity and
+evaluation strategy. Our work is focused on the transformation of the evaluation
+strategy, so we won't describe how purity is removed.
+
+CakeML uses the call-by-value evaluation strategy, therefore CakeML is called a
+strict language. In a strict language, when a function is called its arguments
+are evaluated before the body of the function executes. On the other hand,
+PureCake uses the call-by-name evaluation strategy, making PureCake a lazy
+language. In PureCake, when a function is called its arguments are not
+immediately evaluated. Instead, the function body is evaluated and, if the value
+of some argument is demanded for the evaluation of the function body, only then
+is the value of the argument computed.
+
+To transition from one evaluation strategy to the other, the PureCake compiler
+transforms the lazy program to a strict one by introducing thunks. Thunks are
+like containers that wrap a single unevaluated expression, and evaluate their
+expression when it's necessary. For example, consider the following Pure
+function definition \hsinl{suc n = n + 1}. When a call like \hsinl{suc (f x)} is
+evaluated, the \hsinl{f x} call is only evaluated when the \hsinl{+} operator
+demands its value in the body of \hsinl{suc}. In order to transform the
+program's evaluation strategy, the compiler extends the language with two
+special expressions: \texttt{delay} and \texttt{force}. \texttt{delay} wraps an
+expression in a thunk, and \texttt{force} queries a thunk for its value.
+Therefore, the \hsinl{suc (f x)} lazy call could be simulated in a strict
+language by transforming the call to \hsinl{suc (delay (f x))} and the function
+to \hsinl{suc n = (force n) + 1}.
+
+PureCake achieves the evaluation strategy transformation by passing the source
+program through a series of intermediate languages, at each step changing the
+semantics of the language to close the gap between PureCake and CakeML's
+semantics. The three intermediate languages are \ThunkLang{}, \EnvLang{}, and
+\StateLang{}.
+
+\begin{figure}[h]
+  \begin{tikzpicture}
+    \tikzstyle{box} = [
+      rectangle, rounded corners, minimum width=2cm, minimum height=1cm,
+      text centered, draw=black
+    ]
+    \node (box1) [box] {
+      \shortstack{PureCake \\ pure \\ call-by-name \\ subst. semantics}
+    };
+    \node (box2) [box, right=0.85cm of box1] {
+      \shortstack {
+        \texttt{ThunkLang} \\ pure \\ call-by-value \\ subst. semantics
+      }
+    };
+    \node (box3) [box, right=0.85cm of box2] {
+      \shortstack{\texttt{EnvLang} \\ pure \\ call-by-value \\ env. semantics}
+    };
+    \node (box4) [box, right=0.85cm of box3] {
+      \shortstack {
+        \texttt{StateLang} \\ impure \\ call-by-value \\ env. semantics
+      }
+    };
+    \draw[-stealth] (box1.east) -- (box2.west) node[]{};
+    \draw[-stealth] (box2.east) -- (box3.west) node[]{};
+    \draw[-stealth] (box3.east) -- (box4.west) node[]{};
+  \end{tikzpicture}
+  \caption{PureCake Intermediate Representations}
+\end{figure}
+
+In \ThunkLang{}, the \texttt{delay} and \texttt{force} operators are introduced
+and placed around the appropriate expressions as described above, and the
+evaluation strategy is converted to call-by-value. While this is semantically
+enough, it would be inefficient in practice. In \ThunkLang{}, when a thunk is
+forced multiple times, its contained expression will be evaluated for each
+\texttt{force} separately. Since PureCake is a pure language, we know that the
+value of the thunk will always be the same regardless of when we evaluate it.
+So, ideally, we should only compute it once and then memoize its value for the
+rest of the forces.
+
+This problem is solved in \StateLang{}. \StateLang{}'s semantics employ a
+mutable array called a store. Each time a \texttt{delay} is executed, a thunk is
+produced and appended to the store along with a flag stating that the thunk has
+not yet been evaluated. Then, the first \texttt{force} demanding the thunk's
+value will get a reference to the thunk in the store and evaluate its
+expression. It will then set the flag to state that the thunk has been
+evaluated, and overwrite the unevaluated expression with the result it computed.
+Any subsequent \texttt{force} will then directly use the value instead of
+re-computing the expression.
+
+\section{Motivation}
+
+Even though lazy languages provide the facilities to write very high-level code,
+laziness comes at a runtime cost. In a strict conventional language, a function
+call usually just involves a few machine instructions to move the arguments to
+the right registers and push a stack frame. In a lazy language however, we need
+to allocate space in the main memory to store a thunk for each argument, which
+is orders of magnitudes slower than the strict function calls. Since functions
+are invoked constantly in a functional language, it is critical to optimise
+their usage as much as possible.
+
+As a case study, consider the following PureCake function that sums the numbers
+from 1 to \texttt{n} using an accumulator argument:
+
+\begin{minted}{haskell}
+count n acc =
+  if n == 0 then acc else count (n - 1) (n + acc)
+\end{minted}
+
+We observe that the values of both arguments are always demanded; the value of
+\texttt{n} is needed for the conditional, and the value of \texttt{acc} is
+demanded either directly in the \texttt{then} case, or through the application
+to \hsinl{+} in the \texttt{else} case. Therefore, even though this function is
+used in a lazy language, its behaviour will always be strict. We also note that
+a call-by-value language will optimise this function even further by noticing
+it's tail recursive \cite{tailrec}, turning it into a single loop and thus
+avoiding even the stack allocations.
+
+Since \hsinl{count} is effectively strict in PureCake too, the compiler should
+ideally achieve the same degree of optimisation. Currently, the compiler
+initially translates the source language to \ThunkLang{}, by adding delays to
+arguments in each function application and forces to every use of a parameter:
+
+\begin{minted}{haskell}
+count n acc =
+  if (force n) == 0
+    then (force acc)
+    else count (delay ((force n) - 1))
+               (delay ((force n) + (force acc)))
+\end{minted}
+
+It then applies some \ThunkLang{}-to-\ThunkLang{} optimisations, namely demand
+analysis and a worker-wrapper transformation \cite{Worker/Wrapper}, and produces
+the following code:
+
+\begin{minted}{haskell}
+count' n acc =
+  let n' = force n in
+  let acc' = force acc in
+  if n' == 0 then acc' else
+    count' (delay (n' - 1)) (delay (n' + acc'))
+count = delay count'
+\end{minted}
+
+The compiler detects that \texttt{n} and \texttt{acc} will always be demanded,
+so it forces them in the beginning of the function, thus avoiding work
+duplication. Still, each recursive call has to allocate unnecessary thunks for
+its arguments.
+
+Our goal in this project is to optimise PureCake's handling of thunks as much as
+possible, since it's a critical point for bringing the efficiency of PureCake's
+generated code up to par with that of non-verified compilers for lazy languages.
+
+\section{Project Outline}
+
+Our project consists of three parts:
+\begin{enumerate}
+  \item Creating and formalising a logical relation for \ThunkLang{}
+  \item Implementing more \ThunkLang{}-to-\ThunkLang{} optimisations around
+    thunks
+  \item Adding thunks as first-class constructs in CakeML and optimising their
+    representation in the runtime system.
+\end{enumerate}
+
+The first part is mostly a preparation for the second part. As it will be
+explained in more detail in \autoref{chap:logrel}, developing a logical relation
+for \ThunkLang{} will aid in developing and proving optimisations inside
+\ThunkLang{}. Furthermore, it can also serve as a general framework for proofs
+in \ThunkLang{} that can help reduce boilerplate code and increase code quality
+and maintainability.
+
+The second part in \autoref{chap:opt} is concerned with developing optimisations
+for the handling of thunks in \ThunkLang{}. Going back to the example given in
+the previous section, we see that PureCake doesn't currently optimise the code
+perfectly. We plan on implementing more optimisations that will eventually
+translate the original \hsinl{count} function to
+
+\begin{minted}{haskell}
+count'' n' acc' =
+  if n' == 0 then acc' else
+      count''
+          (n' - 1)
+          (n' + acc')
+count' n acc = count'' (force n) (force acc)
+count = delay count'
+\end{minted}
+
+Since the body of \hsinl{count''} does not include any delays or any forces, it
+can be compiled as-is to CakeML which should then compile it to a loop over the
+two integer arguments. It should be noted that, along with the transformations
+to the function itself, other optimisations can also occur to the rest of the
+program wherever a call to \hsinl{count} appears. These transformations are
+challenging to model in a verified compiler, and this is where our work will be
+focused.
+
+Lastly, the third part in \autoref{chap:thunks} aims to optimise the
+representation of thunks in CakeML. Even with the optimisations discussed for
+part two, which try to minimise the generation of unnecessary thunks, many
+thunks will eventually make it to the runtime. Currently, CakeML doesn't support
+thunks, so PureCake compiles them to CakeML's mutable arrays. Our plan is to add
+thunks to the CakeML compilation pipeline so that PureCake can explicitly target
+them. This will allow the introduction of runtime optimisations as, for example,
+the garbage collector will be able to recognise which data in the heap are
+thunks and apply optimisations such as replacing the thunk with its evaluated
+value \cite{lazygc}.

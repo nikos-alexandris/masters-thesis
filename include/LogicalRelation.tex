@@ -1,0 +1,393 @@
+\chapter{Logical Relation for \ThunkLang{}}
+\label{chap:logrel}
+
+This chapter describes the development of a logical relation for the
+\ThunkLang{} intermediate representation of the PureCake compiler. We start with
+an analysis of \ThunkLang{}'s semantics and the proof methods currently used for
+proving optimisation transformations in it, followed by an overview of logical
+relations. Then, we motivate the introduction of a logical relation for
+\ThunkLang{} and give our definition along with its properties and applications.
+
+\section{The \ThunkLang{} Intermediate Representation}
+
+Each one of PureCake's intermediate representations has its own syntax and
+semantics. \ThunkLang{} is the first intermediate language and its structure
+resembles that of the source language closely with just two differences:
+conversion of the calling convention from call-by-name to call-by-value and
+introduction of the \lit{force} and \lit{delay} expressions. We describe its
+syntax and semantics in depth to help with the understanding of the logical
+relation in the next section.
+
+\subsection{Syntax}
+
+\ThunkLang{}'s syntax is described in the following figure:
+
+\begin{figure}[h]
+  \begin{bnf}
+    $exp$ ::=
+    | \lit{var} $x$
+    | \lit{Prim} $op$ $\overline{e_n}$
+    | \lit{Monad} $mop$ $\overline{e_n}$
+    | $e_1 \cdot e_2$
+    | $\lambda x.\ e$
+    | \lit{letrec} $\overline{x_n = e_n}$ \lit{in} $e$
+    | \lit{let} $x = e_1$ \lit{in} $e_2$
+    | \lit{if} $e_1$ \lit{then} $e_2$ \lit{else} $e_3$
+    | \lit{delay} $e$
+    | \lit{force} $e$
+    | \lit{value} $v$
+    | \lit{tick} $e$
+    ;;
+  \end{bnf}
+  \begin{bnf}
+    $v$ ::=
+    | \lit{Constructor} C $\overline{v_n}$
+    | \lit{Monadic} $mop$ $\overline{e_n}$
+    | \lit{Closure} $x$ $e$
+    | \lit{Recclosure} $\overline{(x_i, e_i)}$ $x$
+    | \lit{Thunk} $e$
+    | \lit{Atom} $lit$
+    | \lit{DoTick} $v$
+    ;;
+  \end{bnf}
+  \caption{\ThunkLang{} Syntax}
+\end{figure}
+
+The set $exp$ describes the language's expressions. \lit{var} is used to denote
+variables by name. \lit{Prim} and \lit{Monad} apply either a pure or a monadic
+operator to a list of expressions. Application and abstraction are denoted as
+$e_1 \cdot e_2$ and $\lambda x.\ e$. \lit{let} and \lit{letrec} denote name
+binding, \lit{if-then-else} the usual conditional operator, and \lit{value}
+embeds a value into an expression. The \lit{delay}, \lit{force} and \lit{tick}
+operators are \ThunkLang{}'s special operators. \lit{delay} and \lit{force} work
+as described in \autoref{chap:intro} and the tick operator will be explained in
+the next section.
+
+The set $v$ describes the language's values. \lit{Constructor} and \lit{Monadic}
+construct pure and monadic values respectively, \lit{Closure} and
+\lit{Recclosure} represent the closures created by \lit{let} and \lit{letrec},
+and \lit{Atom} represents a primitive value. \lit{Thunk} and \lit{DoTick} are
+the new values added in \ThunkLang{} when compared with the source language.
+\lit{Thunk} wraps an expression in an unevaluated thunk, and \lit{DoTick} will
+be explained along with \lit{tick}.
+
+We also observe that $exp$ and $v$ are mutually recursive by means of the
+\lit{value} constructor in $exp$. This is due to \ThunkLang{}'s semantics being
+substitution based. This means that whenever a function call \hsinl{f} $e$ is
+encountered, expression $e$ is substituted into each appearance of the
+corresponding formal parameter of \hsinl{f}. Primary consequence of this is that
+when evaluating a \ThunkLang{} expression, encountering a variable name is
+always an error.
+
+\subsection{Semantics}
+
+\ThunkLang{}'s semantics are defined in a big-step functional style
+\cite{kahn1987natural}. Big-step semantics are defined by derivation rules for
+each construct of the language, and these derivation rules are defined in terms
+of a function $|[\cdot|]$ that maps expressions of the language to values.
+
+Usually in big-step semantics, $|[\cdot|]$'s type would be $exp\ \to\ v\ |\
+\lit{Fail}$, where \lit{Fail} handles the undefined cases such as encountering a
+variable or applying a value that is not a closure. Some derivation rules in
+such semantics would be:
+
+\begin{figure}[h]
+  \[
+    \inference{}{|[\lit{var}\ x|] = \lit{Fail}}\qquad
+    \inference
+    { |[e_1|] = \lit{true} & |[e_2|] = v}
+    { |[\lit{if}\ e_1\ \lit{then}\ e_2\ \lit{else}\ e_3|] = v }
+  \]
+  \caption{Example big-step evaluation rules}
+\end{figure}
+
+Notably, this semantics doesn't capture non-termination. In the
+\lit{if-then-else} case, for example, if $|[e_2|]$ doesn't terminate, we have
+not defined how $|[\cdot|]$ should behave. Usually this is not problematic, as
+translating this semantics to a function in any programming language will imply
+termination if any part of the computation terminates.
+
+However, when writing code in a formal verification tool such as HOL, every
+function defined must be shown to terminate for all possible inputs. Therefore,
+writing an evaluation function for any becomes impossible. To mitigate this, we
+use a technique called clocking \cite{owens2016functional}. This approach works
+by adding a natural number called a clock as an extra argument to $|[\cdot|]_k$,
+and whenever the function recurses the clock decreases. The result type is also
+augmented with a constructor to represent non-termination, which gets produced
+any time the function is called with a zeroed clock. With this transformation,
+the evaluation function's type becomes $|[\cdot|]_k\ :\ \mathbb{N}\ \to\  exp\
+\to\ v\ |\ \lit{Fail}\ |\ \lit{OOT}$. Proving that $|[\cdot|]_k$ terminates is
+now trivial, using the fact that the clock is strictly monotonic decreasing.
+With this transformation, the actual semantic derivation rules presented above
+for \ThunkLang{} become:
+
+\begin{figure}[h]
+  \[
+    \inference{}{|[\lit{var}\ x|]_k = \lit{Fail}}\qquad
+    \inference
+    { |[e_1|]_{k-1} = \lit{true} & |[e_2|]_{k-1} = v }
+    { |[\lit{if}\ e_1\ \lit{then}\ e_2\ \lit{else}\ e_3|]_k = v }
+  \]
+  \[
+    \inference
+    {}
+    { |[\lit{if}\ e_1\ \lit{then}\ e_2\ \lit{else}\ e_3|]_0 = \lit{OOT} }
+  \]
+  \caption{Example \ThunkLang{} evaluation rules}
+\end{figure}
+
+In addition to the clocked function $|[\cdot|]_k$, a regular evaluation function
+$|[\cdot|]$ is also usually defined as
+
+\begin{figure}[h]
+  \[
+    \inference{\nexists k.\ |[e|]_k \neq \lit{OOT}}
+    {|[e|] = \lit{OOT}}\qquad
+    \inference
+    { \exists k.\ |[e|]_k \neq \lit{OOT} & |[e|]_k = v }
+    { |[e|] = v }
+  \]
+  \caption{Top level \ThunkLang{} evaluation function}
+\end{figure}
+
+
+We now have enough context to explain the meaning of the \lit{tick} expression
+and \lit{DoTick} value. Similarly to how the \lit{delay} expression wraps its
+contained expression in a thunk value for \lit{force} to unwrap, the \lit{tick}
+expression wraps its expression in a \lit{DoTick} value. When \lit{force}
+encounters a \lit{DoTick} value, it recurses with the underlying value wrapped
+in a $\lit{force} \circ \lit{value}$, essentially repeating the force opeation
+with one less clock and the unwrapped \lit{DoTick} value.
+
+\begin{figure}[h]
+  \[
+    \inference
+    {|[e|]_k = v}
+    { |[\lit{tick}\ e|]_k = \lit{DoTick}\ v }\qquad
+    \inference{}{|[\lit{delay}\ e|] = \lit{Thunk}\ e}
+  \]
+  \[
+    \inference{}{|[\lit{force}\ e|]_0 = \lit{OOT}}\qquad
+    \inference
+    {|[x|]_k = \lit{Thunk}\ e& |[e|]_{k-1} = u}
+    {|[\lit{force}\ x|]_k = u}
+  \]
+  \[
+    \inference
+    {|[x|]_k = \lit{DoTick}\ v
+     & |[\lit{force}\ (\lit{value}\ v)|]_{k-1} = u}
+    {|[\lit{force}\ x|]_k = u}
+  \]
+  \caption{Derivation rules of \ThunkLang{}'s special operators}
+\end{figure}
+
+\section{Step-Indexed Logical Relations}
+
+Step-indexed logical relations \cite{dreyer2011logical} are a useful tool for
+proving properties of programs. When working with untyped clocked big-step
+semantics, proving basic properties about programs becomes repetitive and
+error-prone, with reasoning about clocks taking up the majority of the proofs.
+Logical relations are already used in CakeML to make reasoning about programs
+easier.
+
+A (binary) logical relation relates two constructs that logically match each
+other. For example, when considering the results of \ThunkLang{}'s evaluation
+function above, we could say that a \lit{Fail} result is related with a
+\lit{Fail} result, but not with an \lit{OOT} result. This, of course should
+extend to all the constructs of the language. When evaluating two expressions
+successfully with results $v_1$ and $v_2$, are the results related or not? It
+becomes evident that we need to construct a similar relation for values and for
+expressions. After defining the relations for every construct of the language,
+we have to prove various compatibility theorems about the relation. These are
+the theorems that proofs using the relation depend on to reduce the amount of
+work they have to manually do. These compatibility theorems prove that the
+relation is closed under the constructs of the language. For example, if $R$ is
+a logical relation and we have $R(x_1, x_2)$ and $R(f_1, f_2)$, then $R(f_1
+\cdot x_1, f_2 \cdot x_2)$ should hold.
+
+Currently, proofs concerning \ThunkLang{} in PureCake are carried out using
+syntax-based relations that require explicit handling of all expression types
+and manually matching up the clocks by inserting \lit{tick} expressions. This
+adds a lot of boilerplate code obfuscating the essence of the proof, and
+requires crafting a new relation every time which comes at the cost of time,
+complexity, and duplication. Although logical relations already exist in CakeML,
+the user of the relation still needs to match up the clocks when carrying out
+proofs. For example, consider the two programs \lit{let $x$ = $e_1$ in $e_2$}
+and $e_2[e_1/x]$. These are obviously equivalent, but the first program takes an
+extra step compared to the second one. Because the relation is step-indexed,
+meaning that programs are not only related to each other but also to a mutual
+clock, these two programs are not directly related. This is the reason
+intermediate languages in CakeML and PureCake contain \lit{tick} expressions.
+The two programs can be show to be equivalent by relating \lit{let $x$ = $e_1$
+in $e_2$} and $\lit{tick} (e_2[e_1/x])$. Our goal is to develop a logical
+relation that will completely decouple the proofs from the clocking mechanism.
+
+Previous work on developing a logical relation that decouples clocks has been
+done in \cite{paraskevopoulou2021compositional}. The authors describe a logical
+relation for CertiCoq's $\lambda$ANF intermediate representation that doesn't
+require the clocks to match exactly, but accepts any relation over the clocks
+that satisfies a set of properties. We take inspiration from their
+implementation and adapt it to \ThunkLang{}.
+
+To adapt the logical relation defined in
+\cite{paraskevopoulou2021compositional}, we first need to develop an alternative
+semantics for \ThunkLang{}, because the clocking in our language is different
+from the clocking of their $\lambda$ANF language. As explained in
+\cite{kumar2018clocked}, there are two ways of embedding clocks in evaluation
+functions: environment-like clocks and state-like clocks. Environment-like
+clocking decrements the clocks on each recursive call and doesn't return them,
+while state-like clocking passes the clocks around as state, thus limiting
+evaluation in terms of length instead of in terms of depth. For example, when
+evaluating an \lit{if-then-else} expression with an environment-like clock $k$,
+the recursive calls to expressions $e_1$, $e_2$, and $e_3$ will all be passed
+the same clock, $k - 1$, whereas with a state like clock, each $e_i$ would get a
+clock $k_i$ such that $\sum k_i \le k$. \ThunkLang{}'s semantics use an
+environment-like clock.
+
+We define an alternative, yet equivalent, semantics that uses a state-like clock
+for the purpose of being compatible with the logical relation. We also add a
+second clock called a trace, which only decrements when a function application
+occurs instead of at every step. This is used to track function application
+depth when proving theorems using the relation about transformations that add or
+remove function applications from the programs. This results in the alternative
+semantics $|[\cdot|]_k^t$.
+
+\section{A Logical Relation for \ThunkLang{}}
+
+\begin{align*}
+  &\textbf{Value Relation}\\
+  &\mathcal{V}^k(\lit{Constructor $n_1$ $\overline{v_1}$}, \lit{Constructor $n_2$ $\overline{v_2}$})\{Q\} \equiv\\
+  &\qquad n_1 = n_2 \land \mathcal{V}^k(\overline{v_1}, \overline{v_2})\{Q\}\\
+  &\mathcal{V}^k(\lit{Monadic $op_1$ $\overline{v_1}$}, \lit{Monadic $op_2$ $\overline{v_2}$})\{Q\} \equiv\\
+  &\qquad op_1 = op_2 \land \mathcal{V}^k(\overline{v_1}, \overline{v_2})\{Q\}\\
+  &\mathcal{V}^k(\lit{Closure $x_1$ $e_1$}, \lit{Closure $x_2$ $e_2$})\{Q\} \equiv\\
+  &\qquad \forall i < k\ v_1\ v_2.\ \mathcal{V}^i(v_1, v_2)\{Q\} \land \mathcal{E}^i(e_1[v_1/x_1], e_2[v_2/x_2])\{Q,Q\}\\
+  &\mathcal{V}^k(\lit{Recclosure $\overline{f_1}$ $x_1$}, \lit{Recclosure $\overline{f_2}$ $x_2$})\{Q\} \equiv\\
+  &\qquad \forall i < k\ e_1.\ e_1 = \overline{f_1}.x_1
+  \Rightarrow \exists e_2.\ e_2 = \overline{f_2}.x_2
+  \land \mathcal{E}^i(e_1[\overline{f_1}], e_2[\overline{f_2}])\{Q,Q\}\\
+  &\mathcal{V}^k(\lit{Thunk $e_1$}, \lit{Thunk $e_2$})\{Q\} \equiv
+  \forall i < k.\ \mathcal{E}^i(e_1, e_2)\{Q,Q\}\\
+  &\mathcal{V}^k(\lit{Atom $l_1$}, \lit{Atom $l_2$})\{Q\} \equiv
+  l_1 = l_2\\
+  &\mathcal{V}^k(\lit{DoTick $v_1$}, \lit{DoTick $v_2$})\{Q\} \equiv
+  \mathcal{V}^k(v_1, v_2)\{Q\}\\
+  &\mathcal{V}^k(v_1, v_2)\{Q\} \equiv \text{False} \qquad\qquad\qquad\qquad \text{Otherwise}\\
+  &\textbf{Result Relation}\\
+  &\mathcal{R}^k(\lit{Fail}, \lit{Fail})\{Q\} \equiv \text{True}\\
+  &\mathcal{R}^k(\lit{OOT}, \lit{OOT})\{Q\} \equiv \text{True}\\
+  &\mathcal{R}^k(v_1, v_2)\{Q\} \equiv \mathcal{V}^k(v_1, v_2)\{Q\}\\
+  &\mathcal{R}^k(r_1, r_2)\{Q\} \equiv \text{False} \qquad\qquad\qquad\qquad \text{Otherwise}\\
+  &\textbf{Expression Relation}\\
+  &\mathcal{E}^k(e_1, e_2){Q_L,Q_G} \equiv
+  \forall c_1 \le k\ t_1\ r_1.\ |[e_1|]_{c_1}^{t_1} = r_1 \Rightarrow\\
+  &\qquad \exists c_2\ t_2\ r_2.\ |[e_2|]_{c_2}^{t_2} = r_2
+  \land Q_L(c_1,t_1)(c_2,t_2)
+  \land \mathcal{R}^{k-c_1}(r_1,r_2)\{Q_G\}\\
+  &\textbf{Variable Relation}\\
+  &\mathcal{X}^k(sub_1, sub_2, x, y)\{Q\} \equiv\\
+  &\qquad \forall v_1.\ sub_1(x) = v_1 \Rightarrow\\
+  &\qquad\qquad\exists v_2.\ sub_2(y) = v_2 \land \mathcal{V}^k(v_1, v_2)\{Q\}\\
+  &\textbf{Substitution Relation}\\
+  &\mathcal{C}^k(S, sub_1, sub_2)\{Q\} \equiv
+  \forall x.\ x \in S \Rightarrow \mathcal{X}^k(sub_1, sub_2, x, x)\{Q\}
+\end{align*}
+\begingroup\vspace*{-\baselineskip}
+\label{fig:logrel}
+\captionof{figure}{\ThunkLang{} Logical Relation.}
+\vspace*{\baselineskip}\endgroup
+
+The logical relation consists of a value relation $\mathcal{V}$, a result
+relation $\mathcal{R}$, an expression relation $\mathcal{E}$, a variable
+relation $\mathcal{X}$, and a substitution relation $\mathcal{C}$. Each relation
+is indexed by a clock k and accepts either one or two invariants. The expression
+relation takes two invariats, a local invariant $Q_L$ and a global invariant
+$Q_G$, while the others take just one invariant $Q$.
+
+The value relation $\mathcal{V}$ relates two \ThunkLang{} values. Two
+constructor values are related if their constructors are the same and their
+argument lists have the same length and are pairwise related. Two closure values
+are related if for any pair of values related at a strictly smaller step index
+the closure bodies are related at this index after substituting their formal
+parameters with the values. Two recursive closure values are related if for any
+strictly smaller step index the selected closure bodies are related at that
+index after substituting the recursive functions into their bodies. Two thunks
+are related if for any strictly smaller step index their enclosed expressions
+are related. Finally, two tick expressions are related if for their values are
+related.
+
+The result relation $\mathcal{R}$ relates two \ThunkLang{} results. Two
+\lit{OOT} results and two \lit{Fail} results are trivially related, and two
+value results are related if their values are related.
+
+The substitution relation $\mathcal{C}$ relates two substitutions over a set of
+variables $S$, if for any variable in $S$ the substitutions map the variable to
+related values, which is expressed by the variable relation $\mathcal{X}$.
+
+\section{Properties}
+
+The invariants the relations range over are binary relations between pairs of
+clocks and traces. Using any relation with the equality invariant ($k_1 = k_2
+\land t_1 = t_2 \Rightarrow Eq(k_1,t_1)(k_2, t_2)$) is equivalent to using a
+standard logical relation. However, more complicated invariants can be used to
+relax the restrictions on the clocking. Coming back to the problem of relating
+\lit{let $x$ = $e_1$ in $e_2$} and $e_2[e_1/x]$, we can now encode their
+relation into the invariants. When working with a syntactic relation as
+\ThunkLang{}'s optimisations currently do, a relation between the two
+expressions would not work directly. One would have to relate \lit{let $x$ =
+$e_1$ in $e_2$} with $\lit{MkTick}(e_2[e_1/x])$ to make the clocks match up,
+which complicates both the relation and the proofs needed to show it's sound.
+With the logical relation though, one could use a local invariant $Q_L$ defined
+as $k_1 = k_2 + 1 \land t_1 = t_2 \Rightarrow Q_L(k_1,t_1),(k_2,t_2)$. Using
+this relation, we can directly relate the two expressions since
+\[\mathcal{E}^k(\lit{let}\ x = e_1\ \lit{in}\ e_2, e_2[e_1/x])\{Q_L,Eq\}\] This
+flexibility is what enables users of the logical relation to decouple their code
+from the handling of the clocks by coming up with an appropriate invariant for
+their transformation.
+
+However, the invariants are subject to some restrictions. We define the
+predicate \lit{Compat} $Q_L$ $Q_G$ to mean that the local and global invariants
+satisfy a set of compatibility rules. These compatibility rules arise from the
+compatibility theorems of the logical relation. Specifically, we need to show
+that the relation is closed under \ThunkLang{}'s constructs. For example, we
+need to prove a lemma stating that if $\mathcal{E}^k(f_1,f_2)\{Q_L,Q_G\}$ and
+$\mathcal{E}^k(x_1,x_2)\{Q_L,Q_G\}$, then $\mathcal{E}^k(f_1 \cdot e_1, f_2
+\cdot e_2)\{Q_L,Q_G\}$. For this to be true, we need to assume $Q_L(0,0)(0,0)$
+and $Q_L(k_1,t_1)(k_2,t_2) \Rightarrow Q_L(k_1+1,t_1+1)(k_2+1,t_2+1)$. Finally,
+the complete lemma for application compatibility is:
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{corollary}{Corollary}[theorem]
+\newtheorem{lemma}[theorem]{Lemma}
+
+\begin{lemma}
+  Assume that $Q_L(0,0)(0,0)$ and that $Q_L(c_1,t_1)(c_2,t_2)\Rightarrow\\Q_L(c_1 + 1,t_1 + 1)(c_2 + 1,t_2 + 1)$.
+  If
+  \begin{itemize}
+    \item $\mathcal{E}^k(x_1, x_2)\{Q_L,Q_G\}$
+    \item $\mathcal{E}^k(f_1, f_2)\{Q_L,Q_G\}$
+  \end{itemize}
+  then $\mathcal{E}^k(f_1 \cdot x_1, f_2 \cdot x_2)\{Q_L,Q_G\}$
+\end{lemma}
+
+We assume that the local invariant holds when both programs time out, and that
+it holds whenever a single application step is made. Similarly, we need to prove
+compatibility lemmas for every other language feature.
+
+Finally, the conditions for the invariants to be compatible with the relation
+are:
+
+\begin{enumerate}
+
+\item $Q_L(0,0)(0,0)$. This is required for when both expressions time out.
+
+\item $Q_L(1,0)(1,0)$. This is required for the \lit{value} base expression, as
+  it occurs a clock step but not a trace step.
+
+\item $Q_L(k_1+1,t_1+1)(k_2+1,t_2+1)$. This is required for the application
+  compatibility.
+
+\end{enumerate}
+
+\todo[inline]{TODO: Add more conditions once the compatibility theorems are
+proved}
