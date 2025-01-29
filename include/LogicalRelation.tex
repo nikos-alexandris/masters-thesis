@@ -53,15 +53,15 @@ relation in the next section.
   \caption{\ThunkLang{} Syntax}
 \end{figure}
 
-The set $exp$ describes the language's expressions. \lit{var} is used to denote
-variables by name. \lit{Prim} and \lit{Monad} apply either a pure or a monadic
-operator to a list of expressions. Application and abstraction are denoted as
-$e_1 \cdot e_2$ and $\lambda x.\ e$. \lit{let} and \lit{letrec} denote name
-binding, \lit{if-then-else} the usual conditional operator, and \lit{value}
-embeds a value into an expression. The \lit{delay}, \lit{force} and \lit{tick}
-operators are \ThunkLang{}'s special operators. \lit{delay} and \lit{force} work
-as described in \autoref{chap:intro} and the tick operator will be explained in
-the next section.
+The $exp$ type describes the language's expressions. We denote the use of
+variables by name with \lit{var}. \lit{Prim} and \lit{Monad} apply either a pure
+or a monadic operator to a list of expressions. Application and abstraction are
+denoted as $e_1 \cdot e_2$ and $\lambda x.\ e$. \lit{let} and \lit{letrec}
+denote name binding, \lit{if-then-else} the usual conditional operator, and
+\lit{value} embeds a value into an expression. The \lit{delay}, \lit{force} and
+\lit{tick} operators are \ThunkLang{}'s special operators. \lit{delay} and
+\lit{force} work as described in \autoref{chap:intro} and the tick operator will
+be explained in the next section.
 
 The set $v$ describes the language's values. \lit{Constructor} and \lit{Monadic}
 construct pure and monadic values respectively, \lit{Closure} and
@@ -81,9 +81,9 @@ always an error.
 
 \subsection{Semantics}
 
-\ThunkLang{}'s semantics are defined in a big-step functional style
-\cite{kahn1987natural}. Big-step semantics are defined by derivation rules for
-each construct of the language, and these derivation rules are defined in terms
+\ThunkLang{}'s semantics is defined in a big-step functional style
+\cite{kahn1987natural}. Big-step semantics is defined by derivation rules for
+each construct of the language, and these derivation rules is defined in terms
 of a function $|[\cdot|]$ that maps expressions of the language to values.
 
 Usually in big-step semantics, $|[\cdot|]$'s type would be $exp\ \to\ v\ |\

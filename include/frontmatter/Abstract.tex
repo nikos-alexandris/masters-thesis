@@ -10,15 +10,15 @@ Chalmers University of Technology and University of Gothenburg
 
 Compiler construction is a research area that is constantly being developed, as
 the need for faster and more correct programming languages and implementations
-is constantly growing. While much work has been done to ensure compilers output
+is steadily growing. While much work has been done to ensure compilers output
 efficient and semantically intact code, the complexity and size of the current
 optimising compilers lead to bugs that can be hard to find and diagnose.
 Situations where correctness is critical has therefore led to the development of
-formally verified compilers, that guarantee both the compiler's and the
-generated code's correctness. The price paid for developing verified compilers
-is that every step in the compilation process must be carefully implemented and
-formalised in order for the verification system to accept it, which makes
-optimisation pipelines much harder to implement.
+formally verified compilers, that guarantee the correctness of the generated
+code. The price paid for developing verified compilers is that every step in the
+compilation process must be carefully implemented and formalised in order for
+the verification system to accept it, which makes optimisation pipelines much
+harder to implement.
 
 This project's work is based on the PureCake verified compiler for pure, lazy
 functional languages. PureCake is an extension of the CakeML project, which
@@ -27,10 +27,9 @@ using the HOL4 formal verification system. The PureCake compiler is already a
 complete verified compiler, but it lacks the optimisations that would make its
 generated code as efficient as the generated code of optimising non-verified
 compilers for lazy languages such as GHC. This project's goal is to develop and
-verify critical missing optimisations, both in PureCake's source-to-source
-optimisation pipeline and in the CakeML's runtime system, in order to close the
-gap between verified and non-verified compilers for lazy languages in terms of
-runtime efficiency.
+verify critical missing optimisations, both in PureCake's optimisation pipeline
+and in the CakeML's runtime system, in order to close the gap between verified
+and non-verified compilers for lazy languages in terms of runtime efficiency.
 
 % KEYWORDS (MAXIMUM 10 WORDS)
 \vfill

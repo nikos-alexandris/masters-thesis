@@ -29,7 +29,7 @@ the programmer to state theorems about the behaviour of their code directly in
 the programming language and then interactively prove them. In our work for this
 thesis, we have used the HOL theorem prover \cite{HOL4}, a proof assistant
 implemented on top of the Standard ML language which supports specification and
-proof development in higher order logic.
+proof development in higher-order logic.
 
 This thesis is concerned with formal verification of programming language
 compilers. Compilers are some of the most complicated pieces of software, and
@@ -47,7 +47,7 @@ While verified compilers such as CompCert exist, they compile small or low level
 languages. This is the case because these languages have been historically used
 in critical systems due to their time, memory, and energy efficiency.
 Nevertheless, with the constant progress in hardware and software research,
-higher level languages are now also viable to be used in even the most
+higher-level languages are now also viable to be used in even the most
 constrained environments. This is preferred when possible, as high level
 languages provide better programming facilities and more guarantees about the
 behaviour of the code.
@@ -112,8 +112,8 @@ is the value of the argument computed.
 
 To transition from one evaluation strategy to the other, the PureCake compiler
 transforms the lazy program to a strict one by introducing thunks. Thunks are
-like containers that wrap a single unevaluated expression, and evaluate their
-expression when it's necessary. For example, consider the following Pure
+containers that wrap a single unevaluated expression, and evaluate their
+expression when forced to do so. For example, consider the following Pure
 function definition \hsinl{suc n = n + 1}. When a call like \hsinl{suc (f x)} is
 evaluated, the \hsinl{f x} call is only evaluated when the \hsinl{+} operator
 demands its value in the body of \hsinl{suc}. In order to transform the
@@ -170,9 +170,9 @@ So, ideally, we should only compute it once and then memoize its value for the
 rest of the forces.
 
 This problem is solved in \StateLang{}. \StateLang{}'s semantics employ a
-mutable array called a store. Each time a \texttt{delay} is executed, a thunk is
-produced and appended to the store along with a flag stating that the thunk has
-not yet been evaluated. Then, the first \texttt{force} demanding the thunk's
+mutable memory called a store. Each time a \texttt{delay} is executed, a thunk
+is produced and appended to the store along with a flag stating that the thunk
+has not yet been evaluated. Then, the first \texttt{force} demanding the thunk's
 value will get a reference to the thunk in the store and evaluate its
 expression. It will then set the flag to state that the thunk has been
 evaluated, and overwrite the unevaluated expression with the result it computed.
@@ -257,8 +257,8 @@ The first part is mostly a preparation for the second part. As it will be
 explained in more detail in \autoref{chap:logrel}, developing a logical relation
 for \ThunkLang{} will aid in developing and proving optimisations inside
 \ThunkLang{}. Furthermore, it can also serve as a general framework for proofs
-in \ThunkLang{} that can help reduce boilerplate code and increase code quality
-and maintainability.
+in \ThunkLang{} that can help reduce boilerplate code and increase proof script
+quality and maintainability.
 
 The second part in \autoref{chap:opt} is concerned with developing optimisations
 for the handling of thunks in \ThunkLang{}. Going back to the example given in
