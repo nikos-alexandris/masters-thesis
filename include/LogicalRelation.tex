@@ -107,7 +107,7 @@ not defined how $|[\cdot|]$ should behave. Usually this is not problematic, as
 translating this semantics to a function in any programming language will imply
 termination if any part of the computation terminates.
 
-However, when writing code in a formal verification tool such as HOL, every
+However, when developing proofs in a formal verification tool such as HOL, every
 function defined must be shown to terminate for all possible inputs. Therefore,
 writing an evaluation function for any becomes impossible. To mitigate this, we
 use a technique called clocking \cite{owens2016functional}. This approach works
@@ -341,9 +341,9 @@ With the logical relation though, one could use a local invariant $Q_L$ defined
 as $k_1 = k_2 + 1 \land t_1 = t_2 \Rightarrow Q_L(k_1,t_1),(k_2,t_2)$. Using
 this relation, we can directly relate the two expressions since
 \[\mathcal{E}^k(\lit{let}\ x = e_1\ \lit{in}\ e_2, e_2[e_1/x])\{Q_L,Eq\}\] This
-flexibility is what enables users of the logical relation to decouple their code
-from the handling of the clocks by coming up with an appropriate invariant for
-their transformation.
+flexibility is what enables users of the logical relation to decouple their
+proofs from the handling of the clocks by coming up with an appropriate
+invariant for their transformation.
 
 However, the invariants are subject to some restrictions. We define the
 predicate \lit{Compat} $Q_L$ $Q_G$ to mean that the local and global invariants

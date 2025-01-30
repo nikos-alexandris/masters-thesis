@@ -18,9 +18,10 @@ transforms its inputs to outputs based on a given specification. A specification
 is usually a mathematical model of the program. For example, one could formally
 verify a regular expression matching program by describing a mapping of the
 program's datatypes to finite state automata, and a mapping of the program's
-procedures to transformations over these automata. Then, the rich mathematical
-theory of finite automata can be used to prove that the transformations are
-correct, therefore proving that the program must also be correct.
+procedures to transformations over these automata. The specification then can
+use the mathematical theory of finite automata to prove theorems about the
+program, such as that the matcher only accepts inputs included in the language
+of the regular expression.
 
 However, for sufficiently complex programs, doing this transformation on paper
 would be impractical and very error-prone. Therefore, the preferred way is to
@@ -201,11 +202,12 @@ count n acc =
 We observe that the values of both arguments are always demanded; the value of
 \texttt{n} is needed for the conditional, and the value of \texttt{acc} is
 demanded either directly in the \texttt{then} case, or through the application
-to \hsinl{+} in the \texttt{else} case. Therefore, even though this function is
-used in a lazy language, its behaviour will always be strict. We also note that
-a call-by-value language will optimise this function even further by noticing
-it's tail recursive \cite{tailrec}, turning it into a single loop and thus
-avoiding even the stack allocations.
+to \hsinl{+} in the \texttt{else} case (this can be inferred by the compiler
+using strictness analysis \cite{sergey2014theory}). Therefore, even though this
+function is used in a lazy language, its behaviour will always be strict. We
+also note that a call-by-value language will optimise this function even further
+by noticing it's tail recursive \cite{tailrec}, turning it into a single loop
+and thus avoiding even the stack allocations.
 
 Since \hsinl{count} is effectively strict in PureCake too, the compiler should
 ideally achieve the same degree of optimisation. Currently, the compiler
@@ -294,3 +296,26 @@ them. This will allow the introduction of runtime optimisations as, for example,
 the garbage collector will be able to recognise which data in the heap are
 thunks and apply optimisations such as replacing the thunk with its evaluated
 value \cite{lazygc}.
+
+\section{Halftime Report: Current status of the Project}
+
+For the first part of the thesis, developing a logical relation for
+\ThunkLang{}, the relation is complete and we have proved some theorems about
+it, but it's not in a usable state yet. Ideally, we want to use the logical
+relation for developing the proof in the second part and then contrast its
+implementation with the rest of the proofs that use syntactic relations.
+Therefore, we are now working on the third part of the project and have left the
+second part for last, hoping this will give us enough time to complete the
+relation.
+
+For the third part, we have added thunks to CakeML's source language and adapted
+the last intermediate language of PureCake to have explicit thunks and target
+CakeML's thunks directly. We are now finishing up on fixing the proofs these
+changes broke, and with all that done we will be ready to implement thunk
+inlining in the garbage collector.
+
+Work on the second part hasn't started yet, but adding thunks to \StateLang{}
+for the third part has demanded changes in \ThunkLang{} too, which has helped
+develop a thorough understanding of how \ThunkLang{}'s proofs work and how they
+are written. This will make the implementation of a new proof easier to develop
+and link up with the rest of the proofs.
