@@ -58,7 +58,7 @@ languages strive to be more declarative and aid the programmer to only have to
 think about the task at hand. This is achieved by providing powerful features
 both during the compilation of the programs, such as type inference and pattern
 matching, and during the runtime such as garbage collection. One such class of
-languages are functional languages. Functional programming's main feature is the
+languages is functional languages. Functional programming's main feature is the
 treatment of functions as first-class entities, meaning that any function can be
 passed as an argument, returned from another function or stored in a data
 structure. Whereas in imperative programming procedures are sequences of
@@ -238,7 +238,224 @@ count = delay count'
 The compiler detects that \texttt{n} and \texttt{acc} will always be demanded,
 so it forces them in the beginning of the function, thus avoiding work
 duplication. Still, each recursive call has to allocate unnecessary thunks for
-its arguments.
+its arguments, but further work is planned to make the behaviour
+eventually be optimal. Even so, we observe the importance of efficiently
+handling thunks, since many of them are allocated and forced even when dealing
+with simple functions.
+
+Another important part of functional programming where thunks come up is data
+structures. As an example, consider the memory representation of evaluating the
+list \hsinl{xs = [1,2,3]} in a strict language. The resulting data structure would
+look like a linked list, with a list of pairs each storing a number and a
+reference to the next pair in the list.
+
+\usetikzlibrary{calc,shapes.multipart,chains,arrows}
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+    list/.style={
+      rectangle split, rectangle split parts=2, draw,
+      rectangle split horizontal},
+    cell/.style={
+      rectangle split, rectangle split parts=2, draw,
+      rectangle split horizontal,fill=cyan,fill opacity=0.5, text opacity=1,
+      draw opacity=1},
+    box/.style={rectangle,draw},
+    boxinv/.style={rectangle},
+    arr/.style = {draw=#1, thick,
+                 {Circle[length=6pt,sep=-3pt]}-{Stealth[width=6pt]}},
+    >=stealth, start chain]
+  \node[cell,on chain] (B) {$1$};
+  \node[cell, on chain] (C) {$2$};
+  \node[cell, on chain] (D) {$3$};
+  \node[on chain] (E) {\texttt{[]}};
+  \node[box] (XSP)[left of=B,xshift=-0.5cm,yshift=-0.5cm] {};
+  \node[boxinv] (XS)[left of=XSP,xshift=0.5cm] {\texttt{xs}};
+  \path[arr=black] (XSP.center) -- (B);
+  \path[arr=black] (B.two north |- B.two east) -- (C);
+  \path[arr=black] (C.two north |- C.two east) -- (D);
+  \path[arr=black] (D.two north |- D.two east) -- (E);
+\end{tikzpicture}
+  \caption{Strict list memory representation}
+\end{figure}
+
+However, in a lazy language the result is quite different. Initially, the result
+of evaluating \hsinl{xs = [1,2,3]} is only an unevaluated thunk.
+
+\usetikzlibrary{calc,shapes.multipart,chains,arrows}
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+    list/.style={
+      rectangle split, rectangle split parts=2, draw,
+      rectangle split horizontal},
+    box/.style={rectangle, draw, minimum width=0.5cm, minimum height=0.5cm},
+    arr/.style = {draw=#1, thick,
+                 {Circle[length=6pt,sep=-3pt]}-{Stealth[width=6pt]}},
+    >=stealth, node distance=2.5cm]
+    \node[list] (B) {
+      \color{red}{\texttt{NE}}
+      \nodepart{second}
+      $\lambda x.\texttt{[}1,2,3\texttt{]}$};
+  \node[rectangle,draw] (XSP)[left of=B,yshift=-0.5cm] {};
+  \node[rectangle] (XS)[left of=XSP,xshift=2cm] {\texttt{xs}};
+  \path[arr=black] (XSP.center) -- (B);
+\end{tikzpicture}
+  \caption{Unevaluated lazy list memory representation}
+\end{figure}
+
+How much the data structure will be evaluated is only determined by the
+operations we apply to it.
+
+\usetikzlibrary{calc,shapes.multipart,chains,arrows}
+\newcommand{\green}[1]{\color{green}\color{.!80!black}{#1}}
+\newcommand{\red}[1]{\color{red}{#1}}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+    list/.style={
+      rectangle split, rectangle split parts=2, draw,
+      rectangle split horizontal},
+    cell/.style={
+      rectangle split, rectangle split parts=2, draw,
+      rectangle split horizontal,fill=cyan,fill opacity=0.5, text opacity=1,
+      draw opacity=1},
+    box/.style={rectangle, draw, minimum width=0.5cm, minimum height=0.5cm},
+    arr/.style = {draw=#1, thick,
+                 {Circle[length=6pt,sep=-3pt]}-{Stealth[width=6pt]}},
+    >=stealth, node distance=2.5cm]
+  \node[rectangle,draw] (XSP) {};
+  \node[rectangle] (XS)[left of=XSP,xshift=2cm] {\texttt{xs}};
+  \node[list] (E1)[right of=XSP,yshift=0.5cm,xshift=-0.8cm] {
+    \green{\texttt{E}}};
+  \node[cell] (M)[above of=E1,yshift=-1cm,xshift=0.5cm] {};
+  \node[list] (E2)[above of=M,yshift=-1cm,xshift=-1cm] {
+      \green{\texttt{E}}
+    \nodepart{second} 1};
+  \node[list] (NE)[above of=M,yshift=-1cm,xshift=1.5cm] {
+    \red{\texttt{NE}}
+    \nodepart{second}
+    $\lambda x.\texttt{[}2,3\texttt{]}$};
+  \path[arr] (XSP.center) -- (E1);
+  \path[arr] (E1.two north |- E1.two east) -- (M);
+  \path[arr] (M.one north |- M.one east) -- (E2);
+  \path[arr] (M.two north |- M.two east) -- (NE);
+\end{tikzpicture}
+  \caption{Lazy list after evaluating the first element}
+\end{figure}
+
+For example, evaluating the expression \hsinl{head xs} demands the evaluation of
+the list's first element, but the rest of the list remains unevaluated. Another
+possibility is to only evaluate every second element of each list cell, also
+known as evaluating the spine of the list. This happens when we examine the
+structure of the list without caring about its contents, for example when
+evaluating \hsinl{length xs}.
+
+\usetikzlibrary{calc,shapes.multipart,chains,arrows}
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+    list/.style={
+      rectangle split, rectangle split parts=2, draw,
+      rectangle split horizontal},
+    cell/.style={
+      rectangle split, rectangle split parts=2, draw,
+      rectangle split horizontal,fill=cyan,fill opacity=0.5, text opacity=1,
+      draw opacity=1},
+    box/.style={rectangle, draw, minimum width=0.5cm, minimum height=0.5cm},
+    arr/.style = {draw=#1, thick,
+                 {Circle[length=6pt,sep=-3pt]}-{Stealth[width=6pt]}},
+    >=stealth, node distance=2.5cm]
+  \node[rectangle,draw] (XSP) {};
+  \node[rectangle] (XS)[left of=XSP,xshift=2cm] {\texttt{xs}};
+  \node[list] (E1)[above of=XSP,xshift=0.5cm,yshift=-1.5cm] {
+    \green{\texttt{E}}};
+  \node[list] (E2)[right of=E1,xshift=-1cm] {\green{\texttt{E}}};
+  \node[list] (E3)[right of=E2,xshift=-1cm] {\green{\texttt{E}}};
+  \node[list] (E4)[right of=E3,xshift=-1cm]
+    {\green{\texttt{E}} \nodepart{second} \texttt{[]}};
+  \node[cell] (C1)[above of=E1,xshift=0.7cm,yshift=-1.5cm] {};
+  \node[cell] (C2)[right of=C1,xshift=-1cm] {};
+  \node[cell] (C3)[right of=C2,xshift=-1cm] {};
+  \node[list] (NE2)[above of=C2,yshift=-1.5cm]
+    {\red{\texttt{NE}} \nodepart{second} $\lambda x. 2$};
+  \node[list] (NE1)[above of=NE2,yshift=-1.8cm,xshift=-2cm]
+    {\red{\texttt{NE}} \nodepart{second} $\lambda x. 1$};
+  \node[list] (NE3)[above of=NE2,yshift=-2cm,xshift=2cm]
+    {\red{\texttt{NE}} \nodepart{second} $\lambda x. 3$};
+  \path[arr] (XSP.center) -- (E1);
+  \path[arr] (E1.two north |- E1.two east) -- (C1);
+  \path[arr] (E2.two north |- E2.two east) -- (C2);
+  \path[arr] (E3.two north |- E3.two east) -- (C3);
+  \path[arr] (C1.two north |- C1.two east) -- (E2);
+  \path[arr] (C2.two north |- C2.two east) -- (E3);
+  \path[arr] (C3.two north |- C3.two east) -- (E4);
+  \path[arr] (C1.one north |- C1.one east) -- (NE1);
+  \path[arr] (C2.one north |- C2.one east) -- (NE2);
+  \path[arr] (C3.one north |- C3.one east) -- (NE3);
+\end{tikzpicture}
+  \caption{Lazy list after evaluating the spine}
+\end{figure}
+
+Lastly, a full evaluation would happen when we traverse the list (thus
+evaluating the spine) and also examining each stored element and therefore
+demanding its value too. An example of such an operation is \hsinl{sum xs} which
+returns the sum of every element in the list, therefore both traversing the
+whole list and demanding all its values.
+
+\usetikzlibrary{calc,shapes.multipart,chains,arrows}
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+    list/.style={
+      rectangle split, rectangle split parts=2, draw,
+      rectangle split horizontal},
+    cell/.style={
+      rectangle split, rectangle split parts=2, draw,
+      rectangle split horizontal,fill=cyan,fill opacity=0.5, text opacity=1,
+      draw opacity=1},
+    box/.style={rectangle, draw, minimum width=0.5cm, minimum height=0.5cm},
+    arr/.style = {draw=#1, thick,
+                 {Circle[length=6pt,sep=-3pt]}-{Stealth[width=6pt]}},
+    >=stealth, node distance=2.5cm]
+  \node[rectangle,draw] (XSP) {};
+  \node[rectangle] (XS)[left of=XSP,xshift=2cm] {\texttt{xs}};
+  \node[list] (E1)[above of=XSP,xshift=0.5cm,yshift=-1.5cm] {
+    \green{\texttt{E}}};
+  \node[list] (E2)[right of=E1,xshift=-1cm] {
+    \green{\texttt{E}}};
+  \node[list] (E3)[right of=E2,xshift=-1cm] {
+    \green{\texttt{E}}};
+  \node[list] (E4)[right of=E3,xshift=-1cm]
+    {\green{\texttt{E}} \nodepart{second} \texttt{[]}};
+  \node[cell] (C1)[above of=E1,xshift=0.7cm,yshift=-1.5cm] {};
+  \node[cell] (C2)[right of=C1,xshift=-1cm] {};
+  \node[cell] (C3)[right of=C2,xshift=-1cm] {};
+  \node[list] (NE2)[above of=C2,yshift=-1.5cm]
+    {\green{\texttt{E}} \nodepart{second} 2};
+  \node[list] (NE1)[above of=C1,yshift=-1.5cm]
+    {\green{\texttt{E}} \nodepart{second} 1};
+  \node[list] (NE3)[above of=C3,yshift=-1.5cm]
+    {\green{\texttt{E}} \nodepart{second} 3};
+  \path[arr] (XSP.center) -- (E1);
+  \path[arr] (E1.two north |- E1.two east) -- (C1);
+  \path[arr] (E2.two north |- E2.two east) -- (C2);
+  \path[arr] (E3.two north |- E3.two east) -- (C3);
+  \path[arr] (C1.two north |- C1.two east) -- (E2);
+  \path[arr] (C2.two north |- C2.two east) -- (E3);
+  \path[arr] (C3.two north |- C3.two east) -- (E4);
+  \path[arr] (C1.one north |- C1.one east) -- (NE1);
+  \path[arr] (C2.one north |- C2.one east) -- (NE2);
+  \path[arr] (C3.one north |- C3.one east) -- (NE3);
+\end{tikzpicture}
+  \caption{Lazy list after full evaluation}
+\end{figure}
+
+Conceptually, the result of fully evaluating the lazy list should be the same as
+having a fully evaluated strict list. However, because of the gradual evaluation
+process, the actual list cells exist in between two layers of thunks, which adds
+unnecessary indirections when we try to later access the elements.
 
 Our goal in this project is to optimise PureCake's handling of thunks as much as
 possible, since it's a critical point for bringing the efficiency of PureCake's
@@ -249,73 +466,38 @@ generated code up to par with that of non-verified compilers for lazy languages.
 Our project consists of three parts:
 \begin{enumerate}
   \item Creating and formalising a logical relation for \ThunkLang{}
-  \item Implementing more \ThunkLang{}-to-\ThunkLang{} optimisations around
-    thunks
+  \item Enriching the semantics of thunk operations in PureCake
   \item Adding thunks as first-class constructs in CakeML and optimising their
     representation in the runtime system.
 \end{enumerate}
 
-The first part is mostly a preparation for the second part. As it will be
-explained in more detail in \autoref{chap:logrel}, developing a logical relation
-for \ThunkLang{} will aid in developing and proving optimisations inside
-\ThunkLang{}. Furthermore, it can also serve as a general framework for proofs
-in \ThunkLang{} that can help reduce boilerplate code and increase proof script
-quality and maintainability.
+The first part is mainly a quality-of-life improvement for proofs in
+\ThunkLang{}. Developing a logical relation for the intermediate representation
+will greatly reduce the complexity and improve the maintainability of the
+proofs, by providing a framework for developing them that encapsulates
+unnecessary details.
 
-The second part in \autoref{chap:opt} is concerned with developing optimisations
-for the handling of thunks in \ThunkLang{}. Going back to the example given in
-the previous section, we see that PureCake doesn't currently optimise the code
-perfectly. We plan on implementing more optimisations that will eventually
-translate the original \hsinl{count} function to
-
-\begin{minted}{haskell}
-count'' n' acc' =
-  if n' == 0 then acc' else
-      count''
-          (n' - 1)
-          (n' + acc')
-count' n acc = count'' (force n) (force acc)
-count = delay count'
-\end{minted}
-
-Since the body of \hsinl{count''} does not include any delays or any forces, it
-can be compiled as-is to CakeML which should then compile it to a loop over the
-two integer arguments. It should be noted that, along with the transformations
-to the function itself, other optimisations can also occur to the rest of the
-program wherever a call to \hsinl{count} appears. These transformations are
-challenging to model in a verified compiler, and this is where our work will be
-focused.
+The second part in \autoref{chap:opt} is concerned with enriching the semantics
+around the handling of thunks in PureCake, so certain needed invariants will
+hold when we make the transition to CakeML. We will also discuss the necessary
+changes we had to make in the PureCake codebase to support this strengthened
+semantics.
 
 Lastly, the third part in \autoref{chap:thunks} aims to optimise the
-representation of thunks in CakeML. Even with the optimisations discussed for
-part two, which try to minimise the generation of unnecessary thunks, many
-thunks will eventually make it to the runtime. Currently, CakeML doesn't support
-thunks, so PureCake compiles them to CakeML's mutable arrays. Our plan is to add
-thunks to the CakeML compilation pipeline so that PureCake can explicitly target
-them. This will allow the introduction of runtime optimisations as, for example,
-the garbage collector will be able to recognise which data in the heap are
-thunks and apply optimisations such as replacing the thunk with its evaluated
-value \cite{lazygc}.
+representation of thunks in CakeML. Even with optimisations  which try to
+minimise the generation of unnecessary thunks, many thunks will eventually make
+it to the runtime. Currently, CakeML doesn't support thunks, so PureCake
+compiles them to 2-valued arrays during the transition to CakeML, where the
+first cell is used as a flag to distinguish between evaluated and unevaluated
+thunks, and the second as the value of the thunk. This prevents
+CakeML to differentiate them from any other array, thus blocking the compiler
+from performing any meaningful optimisations on them.
 
-\section{Halftime Report: Current status of the Project}
+One critical optimisation that we plan on enabling when thunks are added to
+CakeML is inlining of evaluated thunks. Concretely, a pass can be implemented
+during runtime that checks the values on the heap and, if they are indirections
+to evaluated thunks, it can inline the values directly and remove these
+indirections. For our earlier list examples, this would turn a fully evaluated
+lazy list into a strict one, greatly improving the performance of later
+traversals \cite{lazygc}.
 
-For the first part of the thesis, developing a logical relation for
-\ThunkLang{}, the relation is complete and we have proved some theorems about
-it, but it's not in a usable state yet. Ideally, we want to use the logical
-relation for developing the proof in the second part and then contrast its
-implementation with the rest of the proofs that use syntactic relations.
-Therefore, we are now working on the third part of the project and have left the
-second part for last, hoping this will give us enough time to complete the
-relation.
-
-For the third part, we have added thunks to CakeML's source language and adapted
-the last intermediate language of PureCake to have explicit thunks and target
-CakeML's thunks directly. We are now finishing up on fixing the proofs these
-changes broke, and with all that done we will be ready to implement thunk
-inlining in the garbage collector.
-
-Work on the second part hasn't started yet, but adding thunks to \StateLang{}
-for the third part has demanded changes in \ThunkLang{} too, which has helped
-develop a thorough understanding of how \ThunkLang{}'s proofs work and how they
-are written. This will make the implementation of a new proof easier to develop
-and link up with the rest of the proofs.

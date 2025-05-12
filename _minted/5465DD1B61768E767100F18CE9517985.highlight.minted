@@ -1,0 +1,6 @@
+\begin{MintedVerbatim}[commandchars=\\\{\}]
+\PYG{n+nf}{step}\PYG{+w}{ }\PYG{n}{st}\PYG{+w}{ }\PYG{n}{k}\PYG{+w}{ }\PYG{p}{(}\PYG{k+kt}{Exp}\PYG{+w}{ }\PYG{n}{env}\PYG{+w}{ }\PYG{p}{(}\PYG{k+kt}{App}\PYG{+w}{ }\PYG{n}{op}\PYG{+w}{ }\PYG{p}{(}\PYG{n}{e}\PYG{k+kt}{:}\PYG{n}{es}\PYG{p}{)}\PYG{p}{)}\PYG{p}{)}\PYG{+w}{ }\PYG{o+ow}{=}
+\PYG{+w}{  }\PYG{k+kr}{if}\PYG{+w}{ }\PYG{n}{not}\PYG{+w}{ }\PYG{p}{(}\PYG{n}{num\PYGZus{}args\PYGZus{}ok}\PYG{+w}{ }\PYG{n}{op}\PYG{+w}{ }\PYG{p}{(}\PYG{n}{length}\PYG{+w}{ }\PYG{p}{(}\PYG{n}{e}\PYG{k+kt}{:}\PYG{n}{es}\PYG{p}{)}\PYG{p}{)}\PYG{p}{)}
+\PYG{+w}{    }\PYG{k+kr}{then}\PYG{+w}{ }\PYG{n+ne}{error}\PYG{+w}{ }\PYG{n}{st}\PYG{+w}{ }\PYG{n}{k}
+\PYG{+w}{    }\PYG{k+kr}{else}\PYG{+w}{ }\PYG{n}{push}\PYG{+w}{ }\PYG{n}{env}\PYG{+w}{ }\PYG{n}{e}\PYG{+w}{ }\PYG{n}{st}\PYG{+w}{ }\PYG{p}{(}\PYG{k+kt}{AppK}\PYG{+w}{ }\PYG{n}{env}\PYG{+w}{ }\PYG{n}{op}\PYG{+w}{ }\PYG{k+kt}{[]}\PYG{+w}{ }\PYG{n}{es}\PYG{p}{)}\PYG{+w}{ }\PYG{n}{k}
+\end{MintedVerbatim}
