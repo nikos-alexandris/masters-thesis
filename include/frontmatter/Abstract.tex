@@ -26,24 +26,25 @@ itself is a verified compiler for strict functional languages, both developed
 using the HOL4 formal verification system. The PureCake compiler is already a
 complete verified compiler, but it lacks the optimisations that would make its
 generated code as efficient as the generated code of optimising non-verified
-compilers for lazy languages such as GHC. This project's goal is to develop and
-verify critical missing optimisations, both in PureCake's optimisation pipeline
-and in the CakeML's runtime system, in order to close the gap between verified
-and non-verified compilers for lazy languages in terms of runtime efficiency.
+compilers for lazy languages such as GHC. This project's goal is to enhance
+PureCake's language and CakeML's runtime with features that will enable critical
+optimisations to be implemented in order to close the gap between verified and
+non-verified compilers for lazy languages in terms of runtime efficiency.
 
-In this thesis, we take on the task of improving the performance of PureCake's
+In this thesis, we take on the task of improving the quality of PureCake's
 generated code, by optimising the handling of thunks by the PureCake and CakeML
 compilers. We first target the representation of thunks inside the compilation
-pipeline, by implementing optimisations that try to eliminate the generation of
-as many thunks as possible. Then, we target the runtime representation of the
-remaining thunks so that they have a minimal effect on the performance of the
-executable. This work will help bring PureCake up to par with unverified
-compilers in terms of the generated executable's performance, while also making
-sure that the soundness of the compilation process remains intact.
+pipeline, by enriching the semantics of the operations responsible for handling
+thunks and by proving these changes correct. Then, we target the runtime
+representation of the remaining thunks so that they have a minimal effect on the
+performance of the executable. This work will help bring PureCake up to par with
+unverified compilers in terms of the generated executable's performance, while
+also making sure that the soundness of the compilation process remains intact.
 
 % KEYWORDS (MAXIMUM 10 WORDS)
 \vfill
-Keywords: Computer, science, computer science, engineering, project, thesis.
+Keywords: Computer science, thesis, functional programming, formal verification,
+lazy languages, compilers, compiler optimisations.
 
 \newpage				% Create empty back of side
 \thispagestyle{empty}
