@@ -8,6 +8,121 @@ natively. However, when considered as a target for PureCake, it is critical that
 it can handle thunks effectively, since they are the main source of inefficiency
 between lazy and strict programs.
 
+\section{The Semantics of CakeML}
+
+The way CakeML's source semantics are defined is similar to PureCake's. Its
+functional big step semantics are easy to understand at a high level, but they
+are not immediately appropriate for compilation from PureCake. For this reason,
+an alternative semantics is defined based on Interaction Trees, that PureCake
+can directly target to compile its stateful operations.
+
+\begin{figure}[h]
+  \begin{tikzpicture}
+    \tikzstyle{box} = [
+      rectangle, rounded corners,text centered, draw=black]
+    \node (box1) [box] {\StateLang{}};
+    \node (box2) [box, right=0.85cm of box1] {
+      \shortstack {CakeML source \\ ITree semantics}};
+    \node (box3) [box, below=0.65cm of box2, label={$\cong$}] {CakeML source};
+    \node (box4) [box, right=0.85cm of box3] {\FlatLang{}};
+    \node (box5) [box, right=0.85cm of box4] {\ClosLang{}};
+    \node (box6) [rectangle, right=0.85cm of box5] {$\cdots$};
+    \draw[-stealth] (box1.east) -- (box2.west) node[]{};
+    \draw[-stealth] (box3.east) -- (box4.west) node[]{};
+    \draw[-stealth] (box4.east) -- (box5.west) node[]{};
+    \draw[-stealth] (box5.east) -- (box6.west) node[]{};
+  \end{tikzpicture}
+  \caption{Compiler structure after \StateLang{}}
+\end{figure}
+
+The CakeML compiler has many intermediate languages, each one serving the
+purpose of performing some transformations or optimisations, similar to how the
+PureCake compiler is structured. CakeML's source language has a big step
+semantics like \ThunkLang{}, but also a state like \StateLang{}, so we need yet
+another semantics for our operations to adapt to this model.
+
+Similarly to our \StateLang{} changes, we define three stateful thunk operations
+\hsinl{AllocThunk}, \hsinl{UpdateThunk}, and \hsinl{ForceThunk}. A \hsinl{Thunk}
+constructor is also added to the mutable store, as we did in \StateLang{}, with
+an \hsinl{Evaluated} or \hsinl{NotEvaluated} flag. We do not need stateless
+thunks here, since no \lit{force} and \lit{delay} expressions are added to the
+CakeML language. More explicitly, thunks in CakeML are only added as targetable
+operations when constructing a CakeML program as a syntax tree and not by
+writing a program and parsing it.
+
+We now describe the semantics of our operations in CakeML. This semantics stays
+the same between most of the intermediate languages. \hsinl{AllocThunk} accepts
+a single value, appends it to the state and returns the updated state and a
+reference to the newly allocated thunk as a result. The \hsinl{False} flag in
+the reference states that equality of references for this type should be done
+by index and not structurally. Two thunks are the same if and only if they refer
+to the same exact thunk in the store. CakeML's store supports other types such
+as byte arrays that can be compared by value.
+\begin{minted}{haskell}
+eval (AllocThunk m) st [v] =
+  let st' = st ++ [Thunk m v] in
+  (st', Ref False (length st))
+\end{minted}
+Similarly to \StateLang{}, \hsinl{UpdateThunk} accepts an index to the store and
+a value, checks if the reference is an unevaluated thunk and returns the updated
+store and \hsinl{Unit} as the result.
+\begin{minted}{haskell}
+eval (UpdateThunk m) st [Ref _ i, v] =
+  if i >= length st then Error else
+  case st[i] of
+    Thunk NotEvaluated _ ->
+      (update st i (Thunk Evaluated v), Unit)
+    _ -> Error
+\end{minted}
+
+The remaining operator, \hsinl{Force}, is more contrived. We need to make sure
+that all the invariants we proved correct during the PureCake compilation are
+present here too. First, we define a function that decides whether a reference
+in the store is a thunk or not:
+\begin{minted}{haskell}
+dest_thunk [Ref _ i] st =
+  if i >= length st then BadRef else
+  case st[i] of
+    Thunk Evaluated v -> IsThunk Evaluated v
+    Thunk NotEvaluated f -> IsThunk NotEvaluated f
+    _ -> NotThunk
+\end{minted}
+We discriminate between three possible results: \hsinl{BadRef} when the
+reference is out of bounds, \hsinl{NotThunk} when the reference points to
+something other than a thunk, and \hsinl{IsThunk} which returns the thunk's mode
+and value. The reason we have different failing modes for out of bounds accesses
+and references to wrong values will be explained shortly. Then, we define a
+function that updates a thunk:
+\begin{minted}{haskell}
+update_thunk [Ref _ i] st [v] =
+  case dest_thunk [v] st of
+    NotThunk -> Just (update st i (Thunk Evaluated v))
+    _ -> Nothing
+\end{minted}
+Finally, the semantics of \hsinl{ForceThunk} are implemented using these helper
+functions. First, we check that the input value is a thunk. Then, if it's an
+evaluated thunk we return the value. Otherwise we apply the unevaluated function
+to \hsinl{Unit} to evaluate it, and check the result: if it's a thunk, then it's
+an error because force mustn't result in a thunk, otherwise we return the result
+with the updated state.
+\begin{minted}{haskell}
+eval ForceThunk st vs =
+  case dest_thunk vs st of
+    BadRef | NotThunk -> Error
+    IsThunk Evaluated res -> (st, res)
+    IsThunk NotEvaluated f ->
+      case eval st [App f Unit] of
+        Error -> Error
+        (st', res) -> case update_thunk vs st' res of
+                        Nothing -> Error
+                        Just st'' -> (st'', res)
+\end{minted}
+This is the most important code sample in this thesis, as it captures exactly
+our desired semantics for the forcing of stateful thunks.
+
+We will not describe the semantics of these operations in the rest of the
+CakeML's intermediate languages since
+
 \section{Taking Advantage of Thunks in the Runtime}
 
 CakeML, like every high-level functional language, has a garbage collected
