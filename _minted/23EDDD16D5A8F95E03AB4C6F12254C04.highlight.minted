@@ -1,8 +1,0 @@
-\begin{MintedVerbatim}[commandchars=\\\{\}]
-\PYG{n+nf}{foo}\PYG{+w}{ }\PYG{o+ow}{::}\PYG{+w}{ }\PYG{k+kt}{Int}\PYG{+w}{ }\PYG{o+ow}{\PYGZhy{}\PYGZgt{}}\PYG{+w}{ }\PYG{k+kt}{IO}\PYG{+w}{ }\PYG{k+kt}{Int}
-\PYG{n+nf}{foo}\PYG{+w}{ }\PYG{n}{x}\PYG{+w}{ }\PYG{o+ow}{=}\PYG{+w}{ }\PYG{k+kr}{do}
-\PYG{+w}{  }\PYG{k+kr}{let}\PYG{+w}{ }\PYG{n}{y}\PYG{+w}{ }\PYG{o+ow}{=}\PYG{+w}{ }\PYG{n}{f}\PYG{+w}{ }\PYG{n}{x}
-\PYG{+w}{  }\PYG{n}{print}\PYG{+w}{ }\PYG{n}{y}
-\PYG{+w}{  }\PYG{n}{z}\PYG{+w}{ }\PYG{o+ow}{\PYGZlt{}\PYGZhy{}}\PYG{+w}{ }\PYG{n}{input}
-\PYG{+w}{  }\PYG{n}{return}\PYG{+w}{ }\PYG{n}{z}
-\end{MintedVerbatim}

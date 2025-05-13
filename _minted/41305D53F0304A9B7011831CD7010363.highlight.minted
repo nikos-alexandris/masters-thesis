@@ -1,3 +1,0 @@
-\begin{MintedVerbatim}[commandchars=\\\{\}]
-\PYG{n+nf}{suc}\PYG{+w}{ }\PYG{p}{(}\PYG{n}{delay}\PYG{+w}{ }\PYG{p}{(}\PYG{n}{f}\PYG{+w}{ }\PYG{n}{x}\PYG{p}{)}\PYG{p}{)}
-\end{MintedVerbatim}

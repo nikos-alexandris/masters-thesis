@@ -1,8 +1,0 @@
-\begin{MintedVerbatim}[commandchars=\\\{\}]
-\PYG{n+nf}{count\PYGZsq{}}\PYG{+w}{ }\PYG{n}{n}\PYG{+w}{ }\PYG{n}{acc}\PYG{+w}{ }\PYG{o+ow}{=}
-\PYG{+w}{  }\PYG{k+kr}{let}\PYG{+w}{ }\PYG{n}{n\PYGZsq{}}\PYG{+w}{ }\PYG{o+ow}{=}\PYG{+w}{ }\PYG{n}{force}\PYG{+w}{ }\PYG{n}{n}\PYG{+w}{ }\PYG{k+kr}{in}
-\PYG{+w}{  }\PYG{k+kr}{let}\PYG{+w}{ }\PYG{n}{acc\PYGZsq{}}\PYG{+w}{ }\PYG{o+ow}{=}\PYG{+w}{ }\PYG{n}{force}\PYG{+w}{ }\PYG{n}{acc}\PYG{+w}{ }\PYG{k+kr}{in}
-\PYG{+w}{  }\PYG{k+kr}{if}\PYG{+w}{ }\PYG{n}{n\PYGZsq{}}\PYG{+w}{ }\PYG{o}{==}\PYG{+w}{ }\PYG{l+m+mi}{0}\PYG{+w}{ }\PYG{k+kr}{then}\PYG{+w}{ }\PYG{n}{acc\PYGZsq{}}\PYG{+w}{ }\PYG{k+kr}{else}
-\PYG{+w}{    }\PYG{n}{count\PYGZsq{}}\PYG{+w}{ }\PYG{p}{(}\PYG{n}{delay}\PYG{+w}{ }\PYG{p}{(}\PYG{n}{n\PYGZsq{}}\PYG{+w}{ }\PYG{o}{\PYGZhy{}}\PYG{+w}{ }\PYG{l+m+mi}{1}\PYG{p}{)}\PYG{p}{)}\PYG{+w}{ }\PYG{p}{(}\PYG{n}{delay}\PYG{+w}{ }\PYG{p}{(}\PYG{n}{n\PYGZsq{}}\PYG{+w}{ }\PYG{o}{+}\PYG{+w}{ }\PYG{n}{acc\PYGZsq{}}\PYG{p}{)}\PYG{p}{)}
-\PYG{n+nf}{count}\PYG{+w}{ }\PYG{o+ow}{=}\PYG{+w}{ }\PYG{n}{delay}\PYG{+w}{ }\PYG{n}{count\PYGZsq{}}
-\end{MintedVerbatim}
