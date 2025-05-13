@@ -352,16 +352,18 @@ compatibility theorems of the logical relation. Specifically, we need to show
 that the relation is closed under \ThunkLang{}'s constructs. For example, we
 need to prove a lemma stating that if $\mathcal{E}^k(f_1,f_2)\{Q_L,Q_G\}$ and
 $\mathcal{E}^k(x_1,x_2)\{Q_L,Q_G\}$, then $\mathcal{E}^k(f_1 \cdot e_1, f_2
-\cdot e_2)\{Q_L,Q_G\}$. For this to be true, we need to assume $Q_L(0,0)(0,0)$
-and $Q_L(k_1,t_1)(k_2,t_2) \Rightarrow Q_L(k_1+1,t_1+1)(k_2+1,t_2+1)$. Finally,
-the complete lemma for application compatibility is:
+\cdot e_2)\{Q_L,Q_G\}$. For this to be true, we need to assume some relations
+about the invariants. Finally, the complete lemma for application compatibility
+is:
 
 \newtheorem{theorem}{Theorem}[section]
 \newtheorem{corollary}{Corollary}[theorem]
 \newtheorem{lemma}[theorem]{Lemma}
 
 \begin{lemma}
-  Assume that $Q_L(0,0)(0,0)$ and that $Q_L(c_1,t_1)(c_2,t_2)\Rightarrow\\Q_L(c_1 + 1,t_1 + 1)(c_2 + 1,t_2 + 1)$.
+  Assume that $Q_L(0,0)(0,0)$ and that
+  $Q_L(c_1,t_1)(c_2,t_2)\land Q_L(c_3,t_3)(c_4,t_4)\\
+   \Rightarrow Q_L(c_1 + c_3,t_1 + t_3)(c_2 + c_4,t_2 + t_4)$.
   If
   \begin{itemize}
     \item $\mathcal{E}^k(x_1, x_2)\{Q_L,Q_G\}$
@@ -371,23 +373,35 @@ the complete lemma for application compatibility is:
 \end{lemma}
 
 We assume that the local invariant holds when both programs time out, and that
-it holds whenever a single application step is made. Similarly, we need to prove
-compatibility lemmas for every other language feature.
-
-Finally, the conditions for the invariants to be compatible with the relation
-are:
+it holds for the clocks and traces of the combination of the applications.
+Similarly, we need to prove compatibility lemmas for every other language
+feature. Each one of these lemmas requires some relation for the invariants, but
+the minimum set of relations needed to satisfy all compatibility theorems turns
+out to be the following:
 
 \begin{enumerate}
 
-\item $Q_L(0,0)(0,0)$. This is required for when both expressions time out.
+\item $\inference{}{Q_L(0,0)(0,0)}$
+  This base condition is required for when both expressions time out.
+\item $\inference{Q_L(c_1,t_1)(c_2,t_2)}{Q_L(c_1+1,t_1)(c_2+1,t_2)}$ This
+  condition is required for operations that decrease the clock but do not
+  perform any applications.
+\item $\inference{Q_L(c_1,t_1)(c_2,t_2)}{Q_L(c_1+1,t_1+1)(c_2+1,t_2+1)}$ This
+  condition is required for the case where a single application takes place
+  along with the decrease in the clock.
+\item $\inference{Q_L(c_1,t_1)(c_2,t_2)& Q_L(c_3,t_3)(c_4,t_4)}
+                 {Q_L(c_1+c_3,t_1+t_3)(c_2+c_4,t_2+t_4)}$ This last more
+  complicated condition is used during the general application case.
 
-\item $Q_L(1,0)(1,0)$. This is required for the \lit{value} base expression, as
-  it occurs a clock step but not a trace step.
+\section{Usage}
 
-\item $Q_L(k_1+1,t_1+1)(k_2+1,t_2+1)$. This is required for the application
-  compatibility.
+Currently, each proof in \ThunkLang{} has to define a new syntactical relation
+and prove the same lemmas about the relation. Also, an explicit handling of
+clocks is required making each proof that adds or removes clock even more
+tedious and error-prone. Even worse, \ThunkLang{} has a whole \lit{MkTick}
+expression that wraps any other expression and just consumes more clock,
+dedicated to aiding in keeping the clocks synchronised across transformations.
+Using this logical relation as a framework with appropriate invariants for each
+proof, will aid in their development and simplify the language in whole.
 
 \end{enumerate}
-
-\todo[inline]{TODO: Add more conditions once the compatibility theorems are
-proved}

@@ -477,13 +477,13 @@ will greatly reduce the complexity and improve the maintainability of the
 proofs, by providing a framework for developing them that encapsulates
 unnecessary details.
 
-The second part in \autoref{chap:opt} is concerned with enriching the semantics
+The second part in \autoref{chap:pure} is concerned with enriching the semantics
 around the handling of thunks in PureCake, so certain needed invariants will
 hold when we make the transition to CakeML. We will also discuss the necessary
 changes we had to make in the PureCake codebase to support this strengthened
 semantics.
 
-Lastly, the third part in \autoref{chap:thunks} aims to optimise the
+Lastly, the third part in \autoref{chap:cakeml} aims to optimise the
 representation of thunks in CakeML. Even with optimisations  which try to
 minimise the generation of unnecessary thunks, many thunks will eventually make
 it to the runtime. Currently, CakeML doesn't support thunks, so PureCake
