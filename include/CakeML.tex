@@ -117,60 +117,84 @@ eval ForceThunk st vs =
                         Nothing -> Error
                         Just st'' -> (st'', res)
 \end{minted}
-This is the most important code sample in this thesis, as it captures exactly
-our desired semantics for the forcing of stateful thunks.
+The semantics of forcing stateful thunks here is the most important code sample
+in this thesis, as it captures exactly our desired semantics.
 
 We will not describe the semantics of these operations in the rest of the
-CakeML's intermediate languages since
+CakeML's intermediate languages since they are very similar, but we will discuss
+some cases that needed extra attention during the transformations.
 
-\section{Taking Advantage of Thunks in the Runtime}
+\section{Carrying the Semantics Through CakeML}
 
-CakeML, like every high-level functional language, has a garbage collected
-runtime. Each time a certain threshold of allocated memory is surpassed, the
-program stops running and the garbage collector traverses the memory starting
-from known used locations called roots, copying the reachable data into a new
-heap and disposing of the old one. The details of garbage collection in CakeML
-are described in \cite{sandberg2019verified}, but this mental model is enough
-for our description here.
+Through the rest of the compilation from CakeML's source to machine code lots of
+optimisations and transformations take place. The methods used to prove these
+transformations is akin to the ones we described for PureCake. In this section,
+we will discuss two families of transformations that required special attention
+to prove correct for our semantics.
 
-By having thunks represented explicitly in the CakeML source language, we can
-make them explicit through all of CakeML's intermediate representations down to
-the runtime. This would give the ability to the garbage collector to
-discriminate between chunks of memory that represent thunks, which would allow
-an important optimisation called updating \cite{seward1992generational}.
+\subsection{Transforming the State}
 
-\begin{figure}[h]
-  \centering
-  \begin{tikzpicture}
-    \tikzstyle{box} = [rectangle, text centered, draw=black]
-    \node (box0) [box, draw=none] {$x$ : };
-    \node (box1) [box, right=0cm of box0] { $ptr$ };
-    \node (box2) [box, right=1cm of box1, draw=none] { $ptr$ : };
-    \node (box3) [box, right=0cm of box2] { \lit{Evaluated}, 5 };
-  \end{tikzpicture}
-  \caption{Evaluated Thunk Before Optimisation}
-  \label{fig:thunk}
-\end{figure}
+We described the PureCake transformations as a pair of relations $R_e$ and $R_v$
+over the expressions and values of the language. Since PureCake also has a
+state, we also need a third relation $R_s$ that describes how a transformation
+translates states. This $R_s$ is usually straightforward. For index $i$ and
+states $s_1$ and $s_2$, $R_s(s_1,s_2)$ is true if and only if $i$ is in bounds
+for both states, and the store values at the index are related. In the case of
+mutable thunks \hsinl{Thunk} \lit{m v} and \hsinl{Thunk} \lit{m' v'}, they are
+related if and only if \lit{m} = \lit{m}' and $R_v(\lit{v},\lit{v'})$.
 
-To illustrate the idea of the optimisation, suppose we have a thunk that has
-evaluated to the value 5 stored in variable location $x$. The memory block at
-$x$ will hold a pointer to the thunk block, which will hold the actual thunk
-value. Since we now know that the two cells at $ptr$ are a thunk and not just an
-array, we can instruct the garbage collector to replace the thunk with the
-evaluated value when it encounters it. After the garbage collection, the block
-at the $ptr$ location should be completely dropped, and the block in location
-$x$ should just hold the value 5 directly.
+However, one proof shifts the whole state by a certain amount to prepend some
+fixed state to the start of the global store. Therefore, the state relation
+$R_s$ has an extra argument $b$ that maps indices before the transformation to
+their corresponding indices after the transformation. For example, if index $i$
+has stored a \hsinl{Thunk} \lit{m v}, then the related thunk after the
+transformation will not be at index $i$, but rather at index $b(i)$.
+Importantly, $b$ is an injective function, meaning that it maps distinct
+elements from its domain (the indices of $s_1$) to its codomain (the shifted
+indices of $s_2$). What $b$ does not concern itself with is indices that are out
+of bounds in $s_1$, because it doesn't make sense to map an invalid index to
+anything in the transformed array.
 
-This optimisation is crucial for both the memory and time efficiency of the
-program. When an evaluated thunk is in memory two words of memory are wasted,
-the one holding the pointer to the thunk and the \lit{Evaluated} tag. Getting
-rid of these makes for more compact heaps that help the runtime efficiency of
-the program. Furthermore, having the value directly available results in one
-less indirection that the execution of the program has to traverse each time the
-value is demanded, making accesses to it have the same performance
-characteristics as if it were unboxed to begin with.
+This is exactly the case that forced us to distinguish between failures in
+\hsinl{dest_thunk}. Remember from the semantics that \hsinl{update_thunk}
+succeeds only when \hsinl{dest_thunk} fails with a \hsinl{NotThunk} result. If
+the queried index is out of bounds, then technically it is not a thunk and
+\hsinl{update_thunk} could store the invalid reference in an evaluated thunk.
+However, this would make this proof impossible, since if \hsinl{update_thunk}
+succeeded for state $s_1$ and out of bounds index $i$, we would need to show
+that it also succeeds for the transformed state $s_2$ at index $b(i)$. But $i$
+is not in the domain of indices of $s_1$, so $b$ does not provide any
+information about where $i$ is mapped.
+
+\subsection{Closure Conversion}
+
+At one point in the compilation of CakeML, closure conversion
+\cite{reynolds1972definitional} is performed. This transformation achieves the
+separation between code and data. Whereas closures carry both an environment and
+an expression to evaluate, after closure conversion all functions are static
+and the environment is explicitly passed by the caller of the function.
+Another important optimisation performed is compilation to multi-argument
+functions. In functional programming languages, functions usually accept only
+one argument, and functions with multiple arguments are simulated through tuples
+or currying. However, both of these simulations require unnecessary allocations
+during runtime. Therefore, the compiler tries to group curried arguments and
+construct calls to apply them all at once.
+
+This becomes problematic for our force semantics. When we extract an unevaluated
+thunk from the store to evaluate its closure, we apply it to a unit argument.
+However, we don't know prior to extracting the thunk if the enclosed value was a
+simple closure, or if it has been merged with other curried arguments to make a
+multi-argument function. Therefore, during the closure conversion pass we
+generate a piece of code replacing the simple application to unit that performs
+this check.
+
+In the simplest case, the call has not been merged with any other curried
+arguments. Then, a call instruction is generated that enters the code in the
+closure with a unit argument. On the other had, if the closure expects more
+arguments then a different call instruction is generated that will allocate a
+partial application closure or perform repeated applications to accommodate the
+extra arguments.
 
 \todo[inline, size=normalsize] {
-  More technical details will be inserted once all work has been completed on
-  the implementation and proofs.
+  Talk about dataLang, wordLang, and GC
 }

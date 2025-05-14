@@ -13,5 +13,51 @@ For future work, we will consider what possible further optimisations our work
 enables and also how the logical relation scheme might be adopted in other parts
 of the codebase. }
 
+\begin{comment}
+CakeML, like every high-level functional language, has a garbage collected
+runtime. Each time a certain threshold of allocated memory is surpassed, the
+program stops running and the garbage collector traverses the memory starting
+from known used locations called roots, copying the reachable data into a new
+heap and disposing of the old one. The details of garbage collection in CakeML
+are described in \cite{sandberg2019verified}, but this mental model is enough
+for our description here.
+
+By having thunks represented explicitly in the CakeML source language, we can
+make them explicit through all of CakeML's intermediate representations down to
+the runtime. This would give the ability to the garbage collector to
+discriminate between chunks of memory that represent thunks, which would allow
+an important optimisation called updating \cite{seward1992generational}.
+
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \tikzstyle{box} = [rectangle, text centered, draw=black]
+    \node (box0) [box, draw=none] {$x$ : };
+    \node (box1) [box, right=0cm of box0] { $ptr$ };
+    \node (box2) [box, right=1cm of box1, draw=none] { $ptr$ : };
+    \node (box3) [box, right=0cm of box2] { \lit{Evaluated}, 5 };
+  \end{tikzpicture}
+  \caption{Evaluated Thunk Before Optimisation}
+  \label{fig:thunk}
+\end{figure}
+
+To illustrate the idea of the optimisation, suppose we have a thunk that has
+evaluated to the value 5 stored in variable location $x$. The memory block at
+$x$ will hold a pointer to the thunk block, which will hold the actual thunk
+value. Since we now know that the two cells at $ptr$ are a thunk and not just an
+array, we can instruct the garbage collector to replace the thunk with the
+evaluated value when it encounters it. After the garbage collection, the block
+at the $ptr$ location should be completely dropped, and the block in location
+$x$ should just hold the value 5 directly.
+
+This optimisation is crucial for both the memory and time efficiency of the
+program. When an evaluated thunk is in memory two words of memory are wasted,
+the one holding the pointer to the thunk and the \lit{Evaluated} tag. Getting
+rid of these makes for more compact heaps that help the runtime efficiency of
+the program. Furthermore, having the value directly available results in one
+less indirection that the execution of the program has to traverse each time the
+value is demanded, making accesses to it have the same performance
+characteristics as if it were unboxed to begin with.
+\end{comment}
 \section{Results}
 \section{Future Work}

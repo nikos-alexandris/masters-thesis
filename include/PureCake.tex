@@ -513,7 +513,7 @@ proceeding. This seems redundant for \hsinl{ForceMutK} to do, but there is a
 special case which we will examine now that prevents \hsinl{ForceMutK} from
 assuming the thunk is still not evaluated.
 
-\subsection{Recursive \lit{force}ing of Thunks}
+\subsection{Recursive forcing of Thunks}
 
 To explain this problem we consider the simple recursive declaration
 \hsinl{x = x + 1}. When \lit{x} is evaluated, an unevaluated thunk is created in
