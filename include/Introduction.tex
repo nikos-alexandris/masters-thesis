@@ -1,12 +1,9 @@
 \chapter{Introduction}
 \label{chap:intro}
 
-In this section we describe the setting of our thesis; we give a detailed
-description of the projects we will be working on, the tools we are going to
-use, as well as previous research efforts on the area of compiler verification.
-We then motivate our project by examining an example that explains the scope of
-our work in the PureCake compiler. Finally, we give a brief outline of our work
-and the structure of the rest of the thesis.
+In this section we describe the setting of our work and motivate our goals. We
+also give a brief outline of our objectives and the structure of the rest of the
+thesis.
 
 \section{Formal Verification in Software Systems}
 
@@ -44,7 +41,7 @@ formally validated compiler for a large subset of the C99 language.
 
 \section{The PureCake Project}
 
-While verified compilers such as CompCert exist, they compile small or low level
+While verified compilers such as CompCert exist, they compile low level
 languages. This is the case because these languages have been historically used
 in critical systems due to their time, memory, and energy efficiency.
 Nevertheless, with the constant progress in hardware and software research,
@@ -53,7 +50,7 @@ constrained environments. This is preferred when possible, as high level
 languages provide better programming facilities and more guarantees about the
 behaviour of the code.
 
-In contrast to low level and usually imperative languages such as C, high level
+In contrast to low level and imperative languages such as C, high level
 languages strive to be more declarative and aid the programmer to only have to
 think about the task at hand. This is achieved by providing powerful features
 both during the compilation of the programs, such as type inference and pattern
@@ -71,8 +68,8 @@ strong guarantees about a program's behaviour. The CakeML project \cite{CakeML}
 implements the first fully-featured formally verified compiler for a high level,
 functional programming language. It compiles an ML-like language complete with
 type inference, pattern matching, and garbage collected runtime, targeting
-various hardware architectures. CakeML also implements a series of optimisations
-that make the generated executables competitive in runtime efficiency with the
+various hardware architectures. CakeML is continuously developed and
+optimisations are implemented, bridging the gap in runtime efficiency with the
 mainstream unverified alternatives.
 
 Even though CakeML is a step towards a more modular and high level verified
@@ -100,7 +97,7 @@ For PureCake to use the CakeML compiler as a backend to handle the verified
 generation of machine code, it first has to translate its language to CakeML's
 language. The semantics of these languages differ mainly in two ways: purity and
 evaluation strategy. Our work is focused on the transformation of the evaluation
-strategy, so we won't describe how purity is removed.
+strategy.
 
 CakeML uses the call-by-value evaluation strategy, therefore CakeML is called a
 strict language. In a strict language, when a function is called its arguments
@@ -119,9 +116,9 @@ function definition \hsinl{suc n = n + 1}. When a call like \hsinl{suc (f x)} is
 evaluated, the \hsinl{f x} call is only evaluated when the \hsinl{+} operator
 demands its value in the body of \hsinl{suc}. In order to transform the
 program's evaluation strategy, the compiler extends the language with two
-special expressions: \texttt{delay} and \texttt{force}. \texttt{delay} wraps an
-expression in a thunk, and \texttt{force} queries a thunk for its value.
-Therefore, the \hsinl{suc (f x)} lazy call could be simulated in a strict
+special expressions: \texttt{delay} and \texttt{force}. Here, \texttt{delay}
+wraps an expression in a thunk, and \texttt{force} queries a thunk for its
+value. Therefore, the \hsinl{suc (f x)} lazy call could be simulated in a strict
 language by transforming the call to \hsinl{suc (delay (f x))} and the function
 to \hsinl{suc n = (force n) + 1}.
 
@@ -183,13 +180,17 @@ re-computing the expression.
 \section{Motivation}
 
 Even though lazy languages provide the facilities to write very high-level code,
-laziness comes at a runtime cost. In a strict conventional language, a function
-call usually just involves a few machine instructions to move the arguments to
-the right registers and push a stack frame. In a lazy language however, we need
-to allocate space in the main memory to store a thunk for each argument, which
-is orders of magnitudes slower than the strict function calls. Since functions
-are invoked constantly in a functional language, it is critical to optimise
-their usage as much as possible.
+laziness comes at a runtime cost. We will discuss two examples of how
+unoptimised thunks unnecessarily slow down simple programs:
+
+\subsection{Thunks in Function Application}
+
+In a strict conventional language, a function call usually just involves a few
+machine instructions to move the arguments to the right registers and push a
+stack frame. In a lazy language however, we need to allocate space in the main
+memory to store a thunk for each argument, which is orders of magnitudes slower
+than the strict function calls. Since functions are invoked constantly in a
+functional language, it is critical to optimise their usage as much as possible.
 
 As a case study, consider the following PureCake function that sums the numbers
 from 1 to \texttt{n} using an accumulator argument:
@@ -243,11 +244,13 @@ eventually be optimal. Even so, we observe the importance of efficiently
 handling thunks, since many of them are allocated and forced even when dealing
 with simple functions.
 
+\subsection{Thunks in Data Structures}
+
 Another important part of functional programming where thunks come up is data
-structures. As an example, consider the memory representation of evaluating the
-list \hsinl{xs = [1,2,3]} in a strict language. The resulting data structure would
-look like a linked list, with a list of pairs each storing a number and a
-reference to the next pair in the list.
+structures. Consider the memory representation of evaluating the list \hsinl{xs
+= [1,2,3]} in a strict language. The resulting data structure would look like a
+linked list, with a list of pairs each storing a number and a reference to the
+next pair in the list.
 
 \usetikzlibrary{calc,shapes.multipart,chains,arrows}
 \begin{figure}[h]
@@ -465,10 +468,9 @@ generated code up to par with that of non-verified compilers for lazy languages.
 
 Our project consists of three parts:
 \begin{enumerate}
-  \item Creating and formalising a logical relation for \ThunkLang{}
-  \item Enriching the semantics of thunk operations in PureCake
-  \item Adding thunks as first-class constructs in CakeML and optimising their
-    representation in the runtime system.
+  \item Creating and formalising a logical relation for \ThunkLang{}.
+  \item Enriching the semantics of thunk operations in PureCake.
+  \item Adding thunks as first-class constructs in CakeML.
 \end{enumerate}
 
 The first part is mainly a quality-of-life improvement for proofs in
@@ -483,21 +485,15 @@ hold when we make the transition to CakeML. We will also discuss the necessary
 changes we had to make in the PureCake codebase to support this strengthened
 semantics.
 
-Lastly, the third part in \autoref{chap:cakeml} aims to optimise the
-representation of thunks in CakeML. Even with optimisations  which try to
-minimise the generation of unnecessary thunks, many thunks will eventually make
-it to the runtime. Currently, CakeML doesn't support thunks, so PureCake
-compiles them to 2-valued arrays during the transition to CakeML, where the
-first cell is used as a flag to distinguish between evaluated and unevaluated
-thunks, and the second as the value of the thunk. This prevents
-CakeML to differentiate them from any other array, thus blocking the compiler
-from performing any meaningful optimisations on them.
-
-One critical optimisation that we plan on enabling when thunks are added to
-CakeML is inlining of evaluated thunks. Concretely, a pass can be implemented
-during runtime that checks the values on the heap and, if they are indirections
-to evaluated thunks, it can inline the values directly and remove these
-indirections. For our earlier list examples, this would turn a fully evaluated
-lazy list into a strict one, greatly improving the performance of later
-traversals \cite{lazygc}.
+Lastly, the third part in \autoref{chap:cakeml} aims to add native thunks to
+CakeML. Even with optimisations  which try to minimise the generation of
+unnecessary thunks, many thunks will eventually make it to the runtime.
+Currently, CakeML doesn't support thunks, so PureCake compiles them to 2-valued
+arrays during the transition to CakeML, where the first cell is used as a flag
+to distinguish between evaluated and unevaluated thunks, and the second as the
+value of the thunk. This prevents CakeML to differentiate them from any other
+array, thus blocking the compiler from performing any meaningful optimisations
+on them. Having a robust implementation of thunks in CakeML will enable
+optimisations to be implemented in the runtime. We discuss some of them in
+detail in Future Work.
 

@@ -27,19 +27,19 @@ using the HOL4 formal verification system. The PureCake compiler is already a
 complete verified compiler, but it lacks the optimisations that would make its
 generated code as efficient as the generated code of optimising non-verified
 compilers for lazy languages such as GHC. This project's goal is to enhance
-PureCake's language and CakeML's runtime with features that will enable critical
+PureCake's and CakeML's language with features that will enable critical
 optimisations to be implemented in order to close the gap between verified and
 non-verified compilers for lazy languages in terms of runtime efficiency.
 
 In this thesis, we take on the task of improving the quality of PureCake's
 generated code, by optimising the handling of thunks by the PureCake and CakeML
-compilers. We first target the representation of thunks inside the compilation
-pipeline, by enriching the semantics of the operations responsible for handling
-thunks and by proving these changes correct. Then, we target the runtime
-representation of the remaining thunks so that they have a minimal effect on the
-performance of the executable. This work will help bring PureCake up to par with
-unverified compilers in terms of the generated executable's performance, while
-also making sure that the soundness of the compilation process remains intact.
+compilers. We first target the representation of thunks inside PureCake, by
+enriching the semantics of the operations responsible for handling thunks and by
+proving these changes correct. Then, we implement thunks in CakeML and lay the
+foundations for future optimisations in the runtime. This work will help bring
+PureCake up to par with unverified compilers in terms of the generated
+executable's performance, while also making sure that the soundness of the
+compilation process remains intact.
 
 % KEYWORDS (MAXIMUM 10 WORDS)
 \vfill
