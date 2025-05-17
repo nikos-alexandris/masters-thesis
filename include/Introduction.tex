@@ -87,17 +87,20 @@ intuitive.
 Building on top of CakeML, the PureCake project \cite{PureCake} has much the
 same goals as CakeML, but for the compilation of lazy pure functional languages.
 The PureCake compiler handles the front-end of the compilation process, such as
-parsing and type checking. It then transforms the source program to a CakeML
-program and hands off the rest of the compilation process to the CakeML
-compiler, therefore creating a verified end-to-end compilation process.
+parsing and type checking for PureCake's source language. It then gradually
+transforms the source program through a series of intermediate languages
+applying optimisations and simplifications, and ends up with an equivalent
+CakeML source program. To complete the compilation process, this program is
+handed off to the CakeML compiler which takes care of the rest of the
+compilation, therefore creating a verified end-to-end process.
 
 \section{PureCake's Compilation Process}
 
 For PureCake to use the CakeML compiler as a backend to handle the verified
-generation of machine code, it first has to translate its language to CakeML's
-language. The semantics of these languages differ mainly in two ways: purity and
-evaluation strategy. Our work is focused on the transformation of the evaluation
-strategy.
+generation of machine code, it first has to translate its language to the CakeML
+compiler's source language. The semantics of these languages differ mainly in
+two ways: purity and evaluation strategy. Our work is focused on the
+transformation of the evaluation strategy.
 
 CakeML uses the call-by-value evaluation strategy, therefore CakeML is called a
 strict language. In a strict language, when a function is called its arguments
@@ -111,8 +114,12 @@ is the value of the argument computed.
 To transition from one evaluation strategy to the other, the PureCake compiler
 transforms the lazy program to a strict one by introducing thunks. Thunks are
 containers that wrap a single unevaluated expression, and evaluate their
-expression when forced to do so. For example, consider the following Pure
-function definition \hsinl{suc n = n + 1}. When a call like \hsinl{suc (f x)} is
+expression when forced to do so. For example, consider the following simple Pure
+function definition:
+\begin{minted}{haskell}
+suc n = n + 1
+\end{minted}
+When a call like \hsinl{suc (f x)} is
 evaluated, the \hsinl{f x} call is only evaluated when the \hsinl{+} operator
 demands its value in the body of \hsinl{suc}. In order to transform the
 program's evaluation strategy, the compiler extends the language with two
@@ -120,7 +127,10 @@ special expressions: \texttt{delay} and \texttt{force}. Here, \texttt{delay}
 wraps an expression in a thunk, and \texttt{force} queries a thunk for its
 value. Therefore, the \hsinl{suc (f x)} lazy call could be simulated in a strict
 language by transforming the call to \hsinl{suc (delay (f x))} and the function
-to \hsinl{suc n = (force n) + 1}.
+to
+\begin{minted}{haskell}
+suc n = (force n) + 1
+\end{minted}
 
 PureCake achieves the evaluation strategy transformation by passing the source
 program through a series of intermediate languages, at each step changing the
@@ -282,8 +292,14 @@ next pair in the list.
   \caption{Strict list memory representation}
 \end{figure}
 
+\usetikzlibrary{calc,shapes.multipart,chains,arrows}
+\newcommand{\green}[1]{\color{green}\color{.!80!black}{#1}}
+\newcommand{\red}[1]{\color{red}{#1}}
+
 However, in a lazy language the result is quite different. Initially, the result
-of evaluating \hsinl{xs = [1,2,3]} is only an unevaluated thunk.
+of evaluating \hsinl{xs = [1,2,3]} is only an unevaluated thunk (we denote the
+evaluated or unevaluated flag with {\green{\lit{E}}} and {\red{\lit{NE}}}
+respectively).
 
 \usetikzlibrary{calc,shapes.multipart,chains,arrows}
 \begin{figure}[h]
@@ -309,10 +325,6 @@ of evaluating \hsinl{xs = [1,2,3]} is only an unevaluated thunk.
 
 How much the data structure will be evaluated is only determined by the
 operations we apply to it.
-
-\usetikzlibrary{calc,shapes.multipart,chains,arrows}
-\newcommand{\green}[1]{\color{green}\color{.!80!black}{#1}}
-\newcommand{\red}[1]{\color{red}{#1}}
 
 \begin{figure}[h]
 \centering
@@ -476,8 +488,9 @@ Our project consists of three parts:
 The first part is mainly a quality-of-life improvement for proofs in
 \ThunkLang{}. Developing a logical relation for the intermediate representation
 will greatly reduce the complexity and improve the maintainability of the
-proofs, by providing a framework for developing them that encapsulates
-unnecessary details.
+proofs, by providing a framework for developing them that reduces boilerplate
+and promotes smaller proofs that compose general rules for the language
+constructs instead of big simulations.
 
 The second part in \autoref{chap:pure} is concerned with enriching the semantics
 around the handling of thunks in PureCake, so certain needed invariants will
@@ -487,8 +500,8 @@ semantics.
 
 Lastly, the third part in \autoref{chap:cakeml} aims to add native thunks to
 CakeML. Even with optimisations  which try to minimise the generation of
-unnecessary thunks, many thunks will eventually make it to the runtime.
-Currently, CakeML doesn't support thunks, so PureCake compiles them to 2-valued
+unnecessary thunks, many thunks will eventually make it to the runtime. Prior to
+this project CakeML didn't support thunks, so PureCake compiles them to 2-valued
 arrays during the transition to CakeML, where the first cell is used as a flag
 to distinguish between evaluated and unevaluated thunks, and the second as the
 value of the thunk. This prevents CakeML to differentiate them from any other
