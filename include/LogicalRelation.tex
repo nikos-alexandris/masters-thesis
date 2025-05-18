@@ -230,20 +230,20 @@ representation that doesn't require the clocks to match exactly, but accepts any
 relation over the clocks that satisfies a set of properties. We take inspiration
 from their implementation and adapt it to \ThunkLang{}.
 
-To adapt the logical relation defined in
-\cite{paraskevopoulou2021compositional}, we first need to develop an alternative
-semantics for \ThunkLang{}, because the clocking in our language is different
-from the clocking of their $\lambda$ANF language. As explained in
-\cite{kumar2018clocked}, there are two ways of embedding clocks in evaluation
-functions: environment-like clocks and state-like clocks. Environment-like
-clocking decrements the clocks on each recursive call and doesn't return them,
-while state-like clocking passes the clocks around as state, thus limiting
-evaluation in terms of length instead of in terms of depth. For example, when
-evaluating an \lit{if-then-else} expression with an environment-like clock $k$,
-the recursive calls to expressions $e_1$, $e_2$, and $e_3$ will all be passed
-the same clock, $k - 1$, whereas with a state like clock, each $e_i$ would get a
-clock $k_i$ such that $\sum k_i \le k$. \ThunkLang{}'s semantics use an
-environment-like clock.
+To adapt the logical relation defined in Paraskevopoulou et
+al.~\cite{paraskevopoulou2021compositional}, we first need to develop an
+alternative semantics for \ThunkLang{}, because the clocking in our language is
+different from the clocking of their $\lambda$ANF language. As explained in
+Kumar et al.~\cite{kumar2018clocked}, there are two ways of embedding clocks in
+evaluation functions: environment-like clocks and state-like clocks.
+Environment-like clocking decrements the clocks on each recursive call and
+doesn't return them, while state-like clocking passes the clocks around as
+state, thus limiting evaluation in terms of length instead of in terms of depth.
+For example, when evaluating an \lit{if-then-else} expression with an
+environment-like clock $k$, the recursive calls to expressions $e_1$, $e_2$, and
+$e_3$ will all be passed the same clock, $k - 1$, whereas with a state like
+clock, each $e_i$ would get a clock $k_i$ such that $\sum k_i \le k$.
+\ThunkLang{}'s semantics use an environment-like clock.
 
 We define an alternative, yet equivalent, semantics that uses a state-like clock
 for the purpose of being compatible with the logical relation. We also add a
