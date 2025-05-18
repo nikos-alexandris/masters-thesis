@@ -2,21 +2,20 @@
 \label{chap:logrel}
 
 This chapter describes the development of a logical relation for the
-\ThunkLang{} intermediate representation of the PureCake compiler. We start with
-an analysis of \ThunkLang{}'s semantics and the proof methods currently used for
+\ThunkLang{} intermediate language of the PureCake compiler. We start with an
+analysis of \ThunkLang{}'s semantics and the proof methods currently used for
 proving optimisation transformations in it, followed by an overview of logical
 relations. Then, we motivate the introduction of a logical relation for
 \ThunkLang{} and give our definition along with its properties and applications.
 
-\section{The \ThunkLang{} Intermediate Representation}
+\section{The \ThunkLang{} Intermediate Language}
 
-Each one of PureCake's intermediate representations has its own syntax and
-semantics. \ThunkLang{} is the first intermediate language and its structure
-resembles that of the source language closely with just two differences:
-conversion of the calling convention from call-by-name to call-by-value and
-introduction of the \lit{force} and \lit{delay} expressions. We describe its
-syntax and semantics in depth to help with the understanding of the logical
-relation in the next section.
+Each one of PureCake's intermediate languages has its own syntax and semantics.
+\ThunkLang{} is the first one, and its structure resembles that of the source
+language closely with just two differences: conversion of the calling convention
+from call-by-name to call-by-value and introduction of the \lit{force} and
+\lit{delay} expressions. We describe its syntax and semantics in depth to help
+with the understanding of the logical relation in the next section.
 
 \subsection{Syntax}
 
@@ -74,10 +73,12 @@ be explained along with \lit{tick}.
 We also observe that $exp$ and $v$ are mutually recursive by means of the
 \lit{value} constructor in $exp$. This is due to \ThunkLang{}'s semantics being
 substitution based. This means that whenever a function call \hsinl{f} $e$ is
-encountered, expression $e$ is substituted into each appearance of the
-corresponding formal parameter of \hsinl{f}. Primary consequence of this is that
-when evaluating a \ThunkLang{} expression, encountering a variable name is
-always an error.
+encountered, the resulting value $v$ of evaluating $e$ is substituted into each
+appearance of the corresponding formal parameter $p$ of \hsinl{f}, turning every
+\lit{var} $p$ expression into \lit{value} $v$. Primary consequence of this is
+that when evaluating a \ThunkLang{} expression, encountering a variable name is
+always an error, since the only way we can run into a variable expression is if
+it hasn't been bound to a value.
 
 \subsection{Semantics}
 
@@ -254,6 +255,7 @@ semantics $|[\cdot|]_k^t$.
 
 \section{A Logical Relation for \ThunkLang{}}
 
+\begin{figure}[p]
 \begin{align*}
   &\textbf{Value Relation}\\
   &\mathcal{V}^k(\lit{Constructor $n_1$ $\overline{v_1}$}, \lit{Constructor $n_2$ $\overline{v_2}$})\{Q\} \equiv\\
@@ -292,17 +294,17 @@ semantics $|[\cdot|]_k^t$.
   &\mathcal{C}^k(S, sub_1, sub_2)\{Q\} \equiv
   \forall x.\ x \in S \Rightarrow \mathcal{X}^k(sub_1, sub_2, x, x)\{Q\}
 \end{align*}
-\begingroup\vspace*{-\baselineskip}
 \label{fig:logrel}
-\captionof{figure}{\ThunkLang{} Logical Relation.}
-\vspace*{\baselineskip}\endgroup
+\caption{\ThunkLang{} Logical Relation}
+\end{figure}
 
-The logical relation consists of a value relation $\mathcal{V}$, a result
-relation $\mathcal{R}$, an expression relation $\mathcal{E}$, a variable
-relation $\mathcal{X}$, and a substitution relation $\mathcal{C}$. Each relation
-is indexed by a clock k and accepts either one or two invariants. The expression
-relation takes two invariats, a local invariant $Q_L$ and a global invariant
-$Q_G$, while the others take just one invariant $Q$.
+The logical relation, given in whole in \autoref{fig:logrel}, consists of a
+value relation $\mathcal{V}$, a result relation $\mathcal{R}$, an expression
+relation $\mathcal{E}$, a variable relation $\mathcal{X}$, and a substitution
+relation $\mathcal{C}$. Each relation is indexed by a clock k and accepts either
+one or two invariants. The expression relation takes two invariats, a local
+invariant $Q_L$ and a global invariant $Q_G$, while the others take just one
+invariant $Q$.
 
 The value relation $\mathcal{V}$ relates two \ThunkLang{} values. Two
 constructor values are related if their constructors are the same and their
@@ -392,6 +394,7 @@ out to be the following:
 \item $\inference{Q_L(c_1,t_1)(c_2,t_2)& Q_L(c_3,t_3)(c_4,t_4)}
                  {Q_L(c_1+c_3,t_1+t_3)(c_2+c_4,t_2+t_4)}$ This last more
   complicated condition is used during the general application case.
+\end{enumerate}
 
 \section{Usage}
 
@@ -404,4 +407,10 @@ dedicated to aiding in keeping the clocks synchronised across transformations.
 Using this logical relation as a framework with appropriate invariants for each
 proof, will aid in their development and simplify the language in whole.
 
-\end{enumerate}
+We have not yet applied this logical relation to re-write any of the proofs in
+\ThunkLang{}. Our work was focused on providing the core of the relation and the
+proofs of the compatibility lemmas for the language's constructs. To make the
+logical relation practical, a comprehensive summary of the techniques required
+for all the proofs must be made, and a library around the relation should be
+developed to make the re-writing as smooth as possible, and the results optimal.
+
