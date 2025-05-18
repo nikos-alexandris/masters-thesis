@@ -236,8 +236,8 @@ interpreter, this invariant doesn't hold.
      the program with \lit{delay}s}} (box2);
   \draw[-stealth] (box2.east) -- (box3.west) node[]{};
   \end{tikzpicture}
-  \caption{Current translation of monadic expressions from PureCake source to
-           \ThunkLang{}}
+  \caption{Translation of monadic expressions from PureCake source to
+           \ThunkLang{} prior to this work}
 \end{figure}
 
 To mitigate this issue we carried out a 4-step plan:
@@ -643,7 +643,13 @@ Finally, we modified the unthunking proof to use the \hsinl{step'} semantics and
 proved the equivalence of the stateless and stateful semantics, bypassing the
 non-termination problem by using \lit{add\_to\_avoid}.
 
-Recapping, this chapter was concerned with making the semantics of forcing
+\section{Summary}
+
+To summarise, this chapter was concerned with making the semantics of forcing
 stricter in PureCake, so the equivalent semantics in CakeML can have this strict
-behaviour. We will now move over to the CakeML side of the project and explore
-the changes we had to implement there to complete our work.
+behaviour. We described the changes to the semantics and optimisation pipelines
+throughout the PureCake project, and gave a detailed account of the challenges
+that arose naturally due to the strengthening of the semantics. We also outlined
+our solutions and proof processes we used to overcome these obstacles and verify
+our semantics are correct. We will now move over to the CakeML side of the
+project and explore the changes we had to implement there to complete our work.

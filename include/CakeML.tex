@@ -10,11 +10,12 @@ between lazy and strict programs.
 
 \section{The Semantics of CakeML}
 
-The way CakeML's source semantics are defined is similar to PureCake's. Its
-functional big step semantics are easy to understand at a high level, but they
-are not immediately appropriate for compilation from PureCake. For this reason,
-an alternative semantics is defined based on Interaction Trees, that PureCake
-can directly target to compile its stateful operations.
+The CakeML source semantics is defined in functional big-step style like
+PureCake source semantics. Its functional big step semantics is easy to
+understand at a high level, but is not immediately appropriate for compilation
+from PureCake. For this reason, an alternative semantics exists based on
+Interaction Trees, that PureCake can directly target to compile its stateful
+operations.
 
 \begin{figure}[h]
   \begin{tikzpicture}
@@ -45,10 +46,11 @@ Similarly to our \StateLang{} changes, we define three stateful thunk operations
 \hsinl{AllocThunk}, \hsinl{UpdateThunk}, and \hsinl{ForceThunk}. A \hsinl{Thunk}
 constructor is also added to the mutable store, as we did in \StateLang{}, with
 an \hsinl{Evaluated} or \hsinl{NotEvaluated} flag. We do not need stateless
-thunks here, since no \lit{force} and \lit{delay} expressions are added to the
-CakeML language. More explicitly, thunks in CakeML are only added as targetable
-operations when constructing a CakeML program as a syntax tree and not by
-writing a program and parsing it.
+thunks here as we did in \StateLang{}, as they were merely a stepping stone
+between the semantics of \EnvLang{} which only has stateless thunks and CakeML
+which we only wanted to have stateful thunks. More explicitly, thunks in CakeML
+are only added as targetable operations when constructing a CakeML program as a
+syntax tree and not by pasing concrete syntax.
 
 We now describe the semantics of our operations in CakeML. This semantics stays
 the same between most of the intermediate languages. \hsinl{AllocThunk} accepts
@@ -195,6 +197,13 @@ arguments then a different call instruction is generated that will allocate a
 partial application closure or perform repeated applications to accommodate the
 extra arguments.
 
-\todo[inline, size=normalsize] {
-  Talk about dataLang, wordLang, and GC
-}
+\section{Summary}
+
+Summarising, in this chapter we discussed our addition of thunks to the CakeML
+intermediate languages and how transformations that deal with the state and the
+calling convention of the languages interacted with our semantics and how we
+dealt with them. Some work is still needed to complete this part of our work, as
+calling functions in the lowest level language in CakeML has a very intricate
+semantics and we are working out how it is best to compile down to it, since
+calls to unevaluated thunks can become complicated as we saw in the previous
+section.
