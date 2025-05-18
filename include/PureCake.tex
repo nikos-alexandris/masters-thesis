@@ -26,7 +26,7 @@ include that check.
 \begin{figure}[h]
   \[
     \inference
-    {|[x|] = \lit{Thunk}\ e& |[e|] = u& \nexists t. u = \lit{Thunk}\ t}
+    {|[x|] = \lit{Thunk}\ e& |[e|] = u& \nexists t.\ u = \lit{Thunk}\ t}
     {|[\lit{force}\ x|] = u}
   \]
   \caption{Stronger version of \lit{force}}
@@ -41,14 +41,14 @@ Before the PureCake compiler transforms a \ThunkLang{} program into the next
 intermediate representation \EnvLang{}, it first goes through a number of
 \ThunkLang{}-to-\ThunkLang{} transformations that perform optimisations on the
 program. For instance, the simple transformation \lit{force\_rel} removes
-\lit{force}s around variables that are known to already be \lit{force}d.
-This is useful when we have an expression like \hsinl{let m = force n in ...},
-where any occurrence of \lit{force n} inside the body is rewritten to just
-refer to \lit{m}. The transformation that concerns us the most is the
-\lit{delay\_force} pass, which transforms expressions of the form
-\lit{delay (force ($e$))} to just $e$. This transformation in its current form
-cannot be proved correct with our new assertion. To explain why, we must examine
-how exactly we prove the correctness of these optimisation passes.
+\lit{force}s around variables that are known to already be \lit{force}d. This is
+useful when we have an expression like \hsinl{let m = force n in ...}, where any
+occurrence of \lit{force n} inside is rewritten to just refer to \lit{m}. The
+transformation that concerns us the most is the \lit{delay\_force} pass, which
+transforms expressions of the form \lit{delay (force ($e$))} to just $e$. This
+transformation in its current form cannot be proved correct with our new
+assertion. To explain why, we must examine how exactly we prove the correctness
+of these optimisation passes.
 
 \subsection{Proving correctness of \ThunkLang{} Optimisations}
 
@@ -58,10 +58,11 @@ appropriate transformation of the values resulting from evaluating a transformed
 expression. Therefore, the main theorem to prove for each transformation is that
 evaluating related expressions results to related values.
 
-\begin{theorem}[\lit{exp\_rel\_eval}] For a transformation $(R_e,R_v)$ and
-  any expressions $e_1,e_2$, if $e_1$ and $e_2$ are related under $R_e$ and
-  $eval(e_1)$ is not an error,
-  then the results of $eval(e_1)$ and $eval(e_2)$ must be related under $R_v$.
+\begin{theorem}[\lit{exp\_rel\_eval}]
+  \label{thm:releval}
+  For a transformation $(R_e,R_v)$ and any expressions $e_1,e_2$, if $e_1$ and
+  $e_2$ are related under $R_e$ and $eval(e_1)$ is not an error, then the
+  results of $eval(e_1)$ and $eval(e_2)$ must be related under $R_v$.
 \end{theorem}
 
 Then, the whole process of translating a \ThunkLang{} program to an \EnvLang{}
@@ -99,12 +100,14 @@ cases such as \[\inference{
 {R_e(\lit{if } x_1 \lit{ then } y_1 \lit{ else } z_1,
 \lit{if } x_2 \lit{ then } y_2 \lit{ else } z_2)}.\]
 
-The reason we allow the first expression in each relation to be an error is
-because we only care not to generate a failing program from a correct one, and
-not the other way around. In the case of \lit{delay\_force}, for a variable $v$
-that expands to a thunk that fails when forced, the program \lit{delay (force
-($v$))} will fail, however the transformed program which is just $v$ may not
-fail if the result of expanding $v$ is never forced.
+We note that transformations like \lit{delay\_force} are why
+\autoref{thm:releval} is relaxed with the error condition for the evaluation of
+$e_1$. The reason we allow the first expression in each relation to be an error
+is because we only care not to generate a failing program from a correct one,
+and not the other way around. In the case of \lit{delay\_force}, for a variable
+$v$ that expands to a thunk that fails when forced, the program \lit{delay
+(force ($v$))} will fail, however the transformed program which is just $v$ may
+not fail if the result of expanding $v$ is never forced.
 
 Since we added this new assertion in the semantics of \lit{force}, we need to
 prove that none of the optimisations violates it. For each of these
@@ -306,13 +309,13 @@ same. Therefore we can immediately move on to the more interesting \StateLang{}.
 and the boundary between PureCake and CakeML. It is also the only intermediate
 representation with a stateful semantics which means it can represent stateful
 thunks. Before \StateLang{}, thunks are stateless; when evaluating an expression
-like \hsinl{f (g x)}, the argument \lit{g x} is turned into a thunk value and
-whenever the corresponding parameter is used in the body of f, the expression
-\lit{g x} is computed anew without the possibility of memoising the result, as
-that would require some stateful operation.
+like \hsinl{(force f) (delay ((force g) x))}, the argument \lit{g x} is turned
+into a thunk value and whenever the corresponding parameter is used in the body
+of f, the expression \lit{g x} is computed anew without the possibility of
+memoising the result, as that would require some stateful operation.
 
 \StateLang{}'s semantics provide a solution for this problem by employing a
-stateful store. This store is an array of mutable arrays, where each array
+mutable state. This state is a store for mutable arrays, where each array
 element can be mutated in place. \StateLang{} also provides primitive operations
 for manipulating arrays, namely \lit{Alloc} for allocating an array, \lit{Sub}
 for dereferencing an array element and \lit{Update} for updating the value of an
@@ -382,34 +385,35 @@ with the third value, and return the unit constructor.
 
 Thunks in \StateLang{} exist in two forms: stateless and stateful. The stateless
 thunks are the same as in the previous intermediate representations, and exist
-so that compilation from \EnvLang{} can directly target them. Currently,
-\StateLang{}'s store is used to implement stateful thunks in an ad-hoc way.
-Instead of having a proper representation for thunks, a thunk is represented as
-a two value array: the first value is a boolean flag and the second value is the
-actual value. When a thunk is needed, the array is allocated with the flag set
-to signal that the thunk is not yet evaluated, and the second value being a
-closure that when applied to unit computes the thunk's value. When a \lit{force}
-encounters such a value, it checks the flag in the first place of the array and,
-if it is set it immediately returns the value in the second place. If it is not
-set, it applies the second value to unit, replaces the function with the value,
-sets the flag and finally returns the value. To make these operations more
-efficient, there are dual unsafe operators of \lit{Sub} and \lit{Update} called
-\lit{UnsafeSub} and \lit{UnsafeUpdate} respectively. Since the semantics know
-the shape the array argument of a \lit{force} will have, there is no need to
-check if the two indices are in range. The transition from the stateless thunks
-of \ThunkLang{} to the stateful thunks of \StateLang{} is done in a
-\StateLang{}-to-\StateLang{} transformation called unthunking. During
-\StateLang{}'s unthunking, every \lit{delay} and \lit{force} operation is
+so that compilation from \EnvLang{} can directly target them. Prior to this
+work, \StateLang{}'s store is used to implement stateful thunks in an ad-hoc
+way. Instead of having a proper representation for thunks, a thunk is
+represented as a two value array: the first value is a boolean flag and the
+second value is the actual value. When a thunk is needed, the array is allocated
+with the flag set to signal that the thunk is not yet evaluated, and the second
+value being a closure that when applied to unit computes the thunk's value. When
+a \lit{force} encounters such a value, it checks the flag in the first place of
+the array and, if it is set it immediately returns the value in the second
+place. If it is not set, it applies the second value to unit, replaces the
+function with the value, sets the flag and finally returns the value. To make
+these operations more efficient, there are dual unsafe operators of \lit{Sub}
+and \lit{Update} called \lit{UnsafeSub} and \lit{UnsafeUpdate} respectively.
+Since the semantics know the shape the array argument of a \lit{force} will
+have, there is no need to check if the two indices are in range. The transition
+from the stateless thunks of \ThunkLang{} to the stateful thunks of \StateLang{}
+is done in a \StateLang{}-to-\StateLang{} transformation called unthunking.
+During \StateLang{}'s unthunking, every \lit{delay} and \lit{force} operation is
 replaced with the appropriate stateful operations. The generated code for
-\lit{force} currently looks like this:
+\lit{force} of a value stored in variable \lit{v} prior to this work looked
+like this:
 \begin{minted}{haskell}
-Let "v1" (App UnsafeSub [Var "v", Int 0]) $
-Let "v2" (App UnsafeSub [Var "v", Int 1]) $
-  If (Var "v1") (Var "v2") $
-    Let "wh" (App AppOp (Var "v2") Unit) $
-    Let "_" (App UnsafeUpdate [Var "v"; Int 0; True]) $
-    Let "_" (App UnsafeUpdate [Var "v"; Int 1; Var "wh"]) $
-      Var "wh"
+let v1 = unsafeSub v 0
+let v2 = unsafeSub v 1
+if v1 then v2 else
+  let wh = v2 ()
+  let _ = unsafeUpdate v 0 True
+  let _ = unsafeUpdate v 1 wh
+  return wh
 \end{minted}
 This code mimics the desired behaviour, but results in the semantics beign
 hidden as a code generation in a proof instead of being explicit in the
@@ -639,3 +643,7 @@ Finally, we modified the unthunking proof to use the \hsinl{step'} semantics and
 proved the equivalence of the stateless and stateful semantics, bypassing the
 non-termination problem by using \lit{add\_to\_avoid}.
 
+Recapping, this chapter was concerned with making the semantics of forcing
+stricter in PureCake, so the equivalent semantics in CakeML can have this strict
+behaviour. We will now move over to the CakeML side of the project and explore
+the changes we had to implement there to complete our work.
