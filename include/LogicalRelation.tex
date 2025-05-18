@@ -224,11 +224,11 @@ in $e_2$} and $\lit{tick} (e_2[e_1/x])$. Our goal is to develop a logical
 relation that will completely decouple the proofs from the clocking mechanism.
 
 Previous work on developing a logical relation that decouples clocks has been
-done in \cite{paraskevopoulou2021compositional}. The authors describe a logical
-relation for CertiCoq's $\lambda$ANF intermediate representation that doesn't
-require the clocks to match exactly, but accepts any relation over the clocks
-that satisfies a set of properties. We take inspiration from their
-implementation and adapt it to \ThunkLang{}.
+done in Paraskevopoulou et al.~\cite{paraskevopoulou2021compositional}. The
+authors describe a logical relation for CertiCoq's $\lambda$ANF intermediate
+representation that doesn't require the clocks to match exactly, but accepts any
+relation over the clocks that satisfies a set of properties. We take inspiration
+from their implementation and adapt it to \ThunkLang{}.
 
 To adapt the logical relation defined in
 \cite{paraskevopoulou2021compositional}, we first need to develop an alternative

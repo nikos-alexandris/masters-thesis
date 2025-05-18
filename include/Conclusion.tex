@@ -50,8 +50,8 @@ runtime. Each time a certain threshold of allocated memory is surpassed, the
 program stops running and the garbage collector traverses the memory starting
 from known used locations called roots, copying the reachable data into a new
 heap and disposing of the old one. The details of garbage collection in CakeML
-are described in \cite{sandberg2019verified}, but this mental model is enough
-for our description here.
+are described in Sandberg et al.~\cite{sandberg2019verified}, but this mental
+model is enough for our description here.
 
 Having thunks implemented explicitly in the CakeML source language, gives the
 ability to the garbage collector to discriminate between chunks of memory that
