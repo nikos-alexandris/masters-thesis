@@ -126,7 +126,8 @@ program's evaluation strategy, the compiler extends the language with two
 special expressions: \texttt{delay} and \texttt{force}. Here, \texttt{delay}
 wraps an expression in a thunk, and \texttt{force} queries a thunk for its
 value. Therefore, the \hsinl{suc (f x)} lazy call could be simulated in a strict
-language by transforming the call to \hsinl{suc (delay (f x))} and the function
+language by transforming the call to \hsinl{(force suc) (delay ((force f) (delay
+x)))} and the function
 to
 \begin{minted}{haskell}
 suc n = (force n) + 1
@@ -229,8 +230,8 @@ arguments in each function application and forces to every use of a parameter:
 count n acc =
   if (force n) == 0
     then (force acc)
-    else count (delay ((force n) - 1))
-               (delay ((force n) + (force acc)))
+    else (force count) (delay ((force n) - 1))
+                       (delay ((force n) + (force acc)))
 \end{minted}
 
 It then applies some \ThunkLang{}-to-\ThunkLang{} optimisations, namely demand
@@ -480,9 +481,9 @@ generated code up to par with that of non-verified compilers for lazy languages.
 
 Our project consists of three parts:
 \begin{enumerate}
-  \item Creating and formalising a logical relation for \ThunkLang{}.
-  \item Enriching the semantics of thunk operations in PureCake.
-  \item Adding thunks as first-class constructs in CakeML.
+  \item Creating and formalising a logical relation for \ThunkLang{};
+  \item Enriching the semantics of thunk operations in PureCake;
+  \item Adding thunks as first-class constructs to CakeML.
 \end{enumerate}
 
 The first part is mainly a quality-of-life improvement for proofs in
