@@ -106,9 +106,9 @@ thunk value and replace the pointer in $x$ with the result directly.
 \end{figure}
 
 Going back to the data structure example in \autoref{chap:intro}, this
-optimisation would turn a fully evaluated lazy list into a strict list by
-removing the two layers of evaluated thunks and inlining their values where
-previously pointers existed to them.
+optimisation would turn a fully evaluated lazy list (\autoref{tik:sum}) into a
+strict list by removing the two layers of evaluated thunks and inlining their
+values (\autoref{tik:opt}).
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[
@@ -154,7 +154,9 @@ previously pointers existed to them.
   \path[arr] (C3.one north |- C3.one east) -- (NE3);
 \end{tikzpicture}
 \caption{Memory layout after evaluating \hsinl{sum [1,2,3]}}
+\label{tik:sum}
 \end{figure}
+
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[
@@ -181,8 +183,10 @@ previously pointers existed to them.
   \path[arr=black] (C.two north |- C.two east) -- (D);
   \path[arr=black] (D.two north |- D.two east) -- (E);
 \end{tikzpicture}
-  \caption{Memory layout after GC has run and inlined the evaluated thunks}
+\caption{Memory layout after GC has run and inlined the evaluated thunks}
+\label{tik:opt}
 \end{figure}
+
 This optimisation is crucial for both the
 memory and time efficiency of the program. When an evaluated thunk is in memory
 two words of memory are wasted, the one holding the pointer to the thunk and the
